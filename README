@@ -10,6 +10,9 @@ toward making jemalloc among the best allocators for a broad range of demanding
 applications, and eliminating/mitigating weaknesses that have practical
 repercussions for real world applications.
 
+We added numa optimization based on version 3.6.0 and the new function was been 
+put in branch "numa".
+
 The COPYING file contains copyright and licensing information.
 
 The INSTALL file contains information on how to configure, build, and install
