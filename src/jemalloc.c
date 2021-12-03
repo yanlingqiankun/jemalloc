@@ -690,6 +690,11 @@ malloc_init_hard(void)
 		}
 	}
 
+	if (cpu_topology_boot()) {
+		malloc_mutex_unlock(&init_lock);
+		return (true);
+	}
+
 	if (base_boot()) {
 		malloc_mutex_unlock(&init_lock);
 		return (true);
