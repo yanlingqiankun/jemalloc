@@ -411,3 +411,5 @@ tsd_init_check_recursion
 tsd_init_finish
 u2rz
 cpu_topology_boot
+policy_boot
+place_pages

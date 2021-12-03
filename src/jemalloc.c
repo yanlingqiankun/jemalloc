@@ -695,6 +695,11 @@ malloc_init_hard(void)
 		return (true);
 	}
 
+	if (policy_boot()) {
+		malloc_mutex_unlock(&init_lock);
+		return (true);
+	}
+
 	if (base_boot()) {
 		malloc_mutex_unlock(&init_lock);
 		return (true);

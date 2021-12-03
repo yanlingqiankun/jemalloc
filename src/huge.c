@@ -54,6 +54,11 @@ huge_palloc(size_t size, size_t alignment, bool zero)
 		base_node_dealloc(node);
 		return (NULL);
 	}
+	ret = place_pages(ret, csize);
+	if (ret == NULL) {
+		base_node_dealloc(node);
+		return (NULL);
+	}
 
 	/* Insert node into huge. */
 	node->addr = ret;
