@@ -1,10 +1,6 @@
 //
 // Created by shado on 2021/12/2.
 //
-
-#define JEMALLOC_DEV_CPU_H
-#include <numa.h>
-
 #ifdef JEMALLOC_H_TYPES
 
 typedef struct cpu_topology_s cpu_topology_t;
