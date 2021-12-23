@@ -690,16 +690,6 @@ malloc_init_hard(void)
 		}
 	}
 
-	if (cpu_topology_boot()) {
-		malloc_mutex_unlock(&init_lock);
-		return (true);
-	}
-
-	if (policy_boot()) {
-		malloc_mutex_unlock(&init_lock);
-		return (true);
-	}
-
 	if (base_boot()) {
 		malloc_mutex_unlock(&init_lock);
 		return (true);
@@ -775,6 +765,16 @@ malloc_init_hard(void)
 	}
 
 	if (config_prof && prof_boot2()) {
+		malloc_mutex_unlock(&init_lock);
+		return (true);
+	}
+
+	if (cpu_topology_boot()) {
+		malloc_mutex_unlock(&init_lock);
+		return (true);
+	}
+
+	if (policy_boot()) {
 		malloc_mutex_unlock(&init_lock);
 		return (true);
 	}

@@ -21,8 +21,6 @@
 #  include <sys/uio.h>
 #  include <pthread.h>
 #  include <errno.h>
-#  include <numa.h>
-#  include <numaif.h>
 #endif
 #include <sys/types.h>
 
@@ -561,6 +559,7 @@ void	jemalloc_postfork_child(void);
 #include "jemalloc/internal/hash.h"
 #include "jemalloc/internal/quarantine.h"
 #include "jemalloc/internal/prof.h"
+#include "jemalloc/internal/syscall.h"
 #include "jemalloc/internal/cpu.h"
 #include "jemalloc/internal/policy.h"
 

@@ -9,6 +9,21 @@ typedef struct cpu_topology_s cpu_topology_t;
 /******************************************************************************/
 #ifdef JEMALLOC_H_STRUCTS
 
+#if defined(__x86_64__) || defined(__i386__)
+#define NUMA_NUM_NODES  128
+#else
+#define NUMA_NUM_NODES  2048
+#endif
+
+typedef struct {
+        unsigned long n[NUMA_NUM_NODES/(sizeof(unsigned long)*8)];
+} nodemask_t;
+
+struct bitmask {
+	unsigned long size; /* number of bits in the map */
+	unsigned long *maskp;
+};
+
 struct cpu_topology_s {
     unsigned numa_nodes_num;
     unsigned core_per_node;
