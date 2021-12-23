@@ -3,15 +3,13 @@
 //
 #include "jemalloc/internal/jemalloc_internal.h"
 
-bool 
-policy_boot() {
+bool policy_boot() {
     mbind_policy = MBIND_DEFAULT;
     return (false);
 }
 
 // place the pages directed by mbind_policy
-void *
-place_pages(void *addr, size_t size) {
+void *place_pages(void *addr, size_t size) {
     if (addr == NULL) {
         return NULL;
     }

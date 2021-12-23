@@ -4,15 +4,11 @@
 #include "jemalloc/internal/jemalloc_internal.h"
 #include <dirent.h>
 
+
+// copy from libnuma
 #define howmany(x,y) (((x)+((y)-1))/(y))
 #define bitsperlong (8 * sizeof(unsigned long))
 #define longsperbits(n) howmany(n, bitsperlong)
-
-#if defined(__x86_64__) || defined(__i386__)
-#define NUMA_NUM_NODES  128
-#else
-#define NUMA_NUM_NODES  2048
-#endif
 
 static const char *mask_size_file = "/proc/self/status";
 static const char *nodemask_prefix = "Mems_allowed:\t";
@@ -146,7 +142,7 @@ long long numa_node_size64(int node, long long *freep)
 	fclose(f);
 	free(line);
 	if (ok != required)
-		malloc_prinf("Cannot parse sysfs meminfo (%d)\n", ok);
+		malloc_printf("Cannot parse sysfs meminfo (%d)\n", ok);
 	return size;
 }
 
@@ -170,6 +166,16 @@ set_nodemask_size(void)
 	fclose(fp);
 done:
 	nodemask_sz = 16;
+}
+
+struct bitmask *
+numa_allocate_nodemask(void)
+{
+	struct bitmask *bmp;
+	int nnodes = nodemask_sz;
+
+	bmp = numa_bitmask_alloc(nnodes);
+	return bmp;
 }
 
 /*
