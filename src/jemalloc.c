@@ -41,6 +41,8 @@ unsigned		narenas_auto;
 
 /* Set to true once the allocator has been initialized. */
 static bool		malloc_initialized = false;
+static bool		numa_initialized = false;
+static malloc_mutex_t numa_lock;
 
 #ifdef JEMALLOC_THREADED_INIT
 /* Used to let the initializing thread recursively allocate. */
@@ -285,11 +287,31 @@ malloc_thread_init(void)
 		quarantine_alloc_hook();
 }
 
+static bool 
+malloc_numa_init(){	
+	malloc_mutex_lock(&numa_lock);
+	if (numa_initialized) {
+		return true;
+	}
+	if (cpu_topology_boot()) {
+		malloc_mutex_unlock(&numa_lock);
+		return (true);
+	}
+	if (policy_boot()) {
+		malloc_mutex_unlock(&numa_lock);
+		return (true);
+	}
+	numa_initialized = true;
+	malloc_mutex_unlock(&numa_lock);
+	return false;
+}
+
 JEMALLOC_ALWAYS_INLINE_C bool
 malloc_init(void)
 {
-
 	if (malloc_initialized == false && malloc_init_hard())
+		return (true);
+	if (numa_initialized == false && malloc_numa_init())
 		return (true);
 	malloc_thread_init();
 
@@ -769,16 +791,6 @@ malloc_init_hard(void)
 		return (true);
 	}
 
-	if (cpu_topology_boot()) {
-		malloc_mutex_unlock(&init_lock);
-		return (true);
-	}
-
-	if (policy_boot()) {
-		malloc_mutex_unlock(&init_lock);
-		return (true);
-	}
-
 	malloc_mutex_unlock(&init_lock);
 	/**********************************************************************/
 	/* Recursive allocation may follow. */
@@ -804,6 +816,7 @@ malloc_init_hard(void)
 		malloc_mutex_unlock(&init_lock);
 		return (true);
 	}
+	malloc_mutex_init(&numa_lock);
 
 	if (opt_narenas == 0) {
 		/*
