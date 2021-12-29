@@ -27,7 +27,7 @@ struct bitmask {
 struct cpu_topology_s {
     unsigned numa_nodes_num;
     unsigned core_per_node;
-    struct bitmask *node_mask;
+    struct bitmask node_mask;
 
     // nodes * nodes array
     unsigned long bandwidth[1];
@@ -37,8 +37,8 @@ struct cpu_topology_s {
 #endif /* JEMALLOC_H_STRUCTS */
 /******************************************************************************/
 #ifdef JEMALLOC_H_EXTERNS
-
-cpu_topology_t cpu_topology;
+extern bool numa_initialized;
+extern cpu_topology_t cpu_topology;
 
 bool cpu_topology_boot();
 int numa_avail();

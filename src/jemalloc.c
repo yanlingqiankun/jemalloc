@@ -41,7 +41,6 @@ unsigned		narenas_auto;
 
 /* Set to true once the allocator has been initialized. */
 static bool		malloc_initialized = false;
-static bool		numa_initialized = false;
 static malloc_mutex_t numa_lock;
 
 #ifdef JEMALLOC_THREADED_INIT
@@ -310,8 +309,6 @@ JEMALLOC_ALWAYS_INLINE_C bool
 malloc_init(void)
 {
 	if (malloc_initialized == false && malloc_init_hard())
-		return (true);
-	if (numa_initialized == false && malloc_numa_init())
 		return (true);
 	malloc_thread_init();
 
@@ -857,6 +854,7 @@ malloc_init_hard(void)
 
 	malloc_initialized = true;
 	malloc_mutex_unlock(&init_lock);
+	malloc_numa_init();
 
 	return (false);
 }

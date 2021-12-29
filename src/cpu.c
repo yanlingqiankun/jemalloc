@@ -4,26 +4,102 @@
 #include "jemalloc/internal/jemalloc_internal.h"
 #include <dirent.h>
 
+int numa_avail() {
+    if (get_mempolicy(NULL, NULL, 0, 0, 0) < 0 && errno == ENOSYS)
+        return -1;
+    return 0;
+}
 
 // copy from libnuma
 #define howmany(x,y) (((x)+((y)-1))/(y))
 #define bitsperlong (8 * sizeof(unsigned long))
 #define longsperbits(n) howmany(n, bitsperlong)
+#define bitsperint (8 * sizeof(unsigned int))
 
 static const char *mask_size_file = "/proc/self/status";
 static const char *nodemask_prefix = "Mems_allowed:\t";
 static int nodemask_sz = 0;
-
+static int numprocnode = -1;
+struct bitmask *numa_all_nodes_ptr = NULL;
 struct bitmask *numa_nodes_ptr = NULL;
 static struct bitmask *numa_memnode_ptr = NULL;
 nodemask_t numa_all_nodes;
-
 static int maxconfigurednode = -1;
 
-int numa_avail() {
-    if (get_mempolicy(NULL, NULL, 0, 0, 0) < 0 && errno == ENOSYS)
-        return -1;
-    return 0;
+bool numa_initialized = false;
+cpu_topology_t cpu_topology;
+
+
+static unsigned int
+_getbit(const struct bitmask *bmp, unsigned int n)
+{
+	if (n < bmp->size)
+		return (bmp->maskp[n/bitsperlong] >> (n % bitsperlong)) & 1;
+	else
+		return 0;
+}
+/* Hamming Weight: number of set bits */
+unsigned int numa_bitmask_weight(const struct bitmask *bmp)
+{
+	unsigned int i;
+	unsigned int w = 0;
+	for (i = 0; i < bmp->size; i++)
+		if (_getbit(bmp, i))
+			w++;
+	return w;
+}
+
+static int
+read_mask(char *s, struct bitmask *bmp)
+{
+	char *end = s;
+	int tmplen = (bmp->size + bitsperint - 1) / bitsperint;
+	unsigned int tmp[tmplen];
+	unsigned int *start = tmp;
+	unsigned int i, n = 0, m = 0;
+
+	if (!s)
+		return 0;	/* shouldn't happen */
+
+	i = strtoul(s, &end, 16);
+
+	/* Skip leading zeros */
+	while (!i && *end++ == ',') {
+		i = strtoul(end, &end, 16);
+	}
+
+	if (!i)
+		/* End of string. No mask */
+		return -1;
+
+	start[n++] = i;
+	/* Read sequence of ints */
+	while (*end++ == ',') {
+		i = strtoul(end, &end, 16);
+		start[n++] = i;
+
+		/* buffer overflow */
+		if (n > tmplen)
+			return -1;
+	}
+
+	/*
+	 * Invert sequence of ints if necessary since the first int
+	 * is the highest and we put it first because we read it first.
+	 */
+	while (n) {
+		int w;
+		unsigned long x = 0;
+		/* read into long values in an endian-safe way */
+		for (w = 0; n && w < bitsperlong; w += bitsperint)
+			x |= ((unsigned long)start[n-- - 1] << w);
+
+		bmp->maskp[m++] = x;
+	}
+	/*
+	 * Return the number of bits set
+	 */
+	return numa_bitmask_weight(bmp);
 }
 
 struct bitmask *
@@ -33,7 +109,7 @@ numa_bitmask_alloc(unsigned int n)
 
 	if (n < 1) {
 		errno = EINVAL;
-		malloc_printf("request to allocate mask for invalid number\n");
+		malloc_printf("request to allocate mask for invalid number and size is %d\n", n);
 		exit(1);
 	}
 	bmp = base_alloc(sizeof(*bmp));
@@ -51,6 +127,16 @@ numa_bitmask_alloc(unsigned int n)
 oom:
 	malloc_printf("Out of memory allocating bitmask\n");
 	exit(1);
+}
+
+struct bitmask *
+numa_allocate_nodemask(void)
+{
+	struct bitmask *bmp;
+	int nnodes = nodemask_sz;
+
+	bmp = numa_bitmask_alloc(nnodes);
+	return bmp;
 }
 
 static int s2nbits(const char *s)
@@ -73,15 +159,6 @@ _setbit(struct bitmask *bmp, unsigned int n, unsigned int v)
 		else
 			bmp->maskp[n/bitsperlong] &= ~(1UL << (n % bitsperlong));
 	}
-}
-
-static unsigned int
-_getbit(const struct bitmask *bmp, unsigned int n)
-{
-	if (n < bmp->size)
-		return (bmp->maskp[n/bitsperlong] >> (n % bitsperlong)) & 1;
-	else
-		return 0;
 }
 
 struct bitmask *
@@ -159,23 +236,36 @@ set_nodemask_size(void)
 	while (getline(&buf, &bufsize, fp) > 0) {
 		if (strprefix(buf, nodemask_prefix)) {
 			nodemask_sz = s2nbits(buf + strlen(nodemask_prefix));
+			if (strncmp(buf,"Mems_allowed:",13) == 0) {
+				numa_all_nodes_ptr = numa_allocate_nodemask();
+				char *mask = strchr(buf, '\t') + 1;
+				numprocnode = read_mask(mask, numa_all_nodes_ptr);
+			}
 			break;
 		}
 	}
 	free(buf);
 	fclose(fp);
+	int i;
+	if (numprocnode <= 0) {
+		for (i = 0; i <= maxconfigurednode; i++)
+			numa_bitmask_setbit(numa_all_nodes_ptr, i);
+		numprocnode = maxconfigurednode + 1;
+	}
 done:
-	nodemask_sz = 16;
-}
-
-struct bitmask *
-numa_allocate_nodemask(void)
-{
-	struct bitmask *bmp;
-	int nnodes = nodemask_sz;
-
-	bmp = numa_bitmask_alloc(nnodes);
-	return bmp;
+	if (nodemask_sz == 0) {/* fall back on error */
+		int pol;
+		unsigned long *mask = NULL;
+		nodemask_sz = 16;
+		do {
+			nodemask_sz <<= 1;
+			mask = realloc(mask, nodemask_sz / 8);
+			if (!mask)
+				return;
+		} while (get_mempolicy(&pol, mask, nodemask_sz + 1, 0, 0) < 0 && errno == EINVAL &&
+				nodemask_sz < 4096*8);
+		free(mask);
+	}
 }
 
 /*
@@ -238,7 +328,7 @@ static inline void nodemask_set_compat(nodemask_t *mask, int node)
 }
 
 bool cpu_topology_boot() {
-    if (!numa_avail()) {
+    if (numa_avail()) {
         return true;
     }
     int i;
@@ -249,10 +339,7 @@ bool cpu_topology_boot() {
     for (i = 0; i < max; i++)
         nodemask_set_compat((nodemask_t *)&numa_all_nodes, i);
 
-    cpu_topology.numa_nodes_num = maxconfigurednode;
-    struct bitmask *bmp = &(cpu_topology.node_mask);    
-    if(get_mempolicy(NULL, bmp->maskp, bmp->size+1, 0, MPOL_F_MEMS_ALLOWED) < 0) {
-        malloc_printf("error to get_mempolicy");
-    }
+    cpu_topology.numa_nodes_num = nodemask_sz;
+	cpu_topology.node_mask = *numa_all_nodes_ptr;
     return false;
 }
