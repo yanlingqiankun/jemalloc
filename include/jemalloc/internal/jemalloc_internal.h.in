@@ -461,6 +461,7 @@ static const bool config_ivsalloc =
 #include "jemalloc/internal/prof.h"
 #include "jemalloc/internal/cpu.h"
 #include "jemalloc/internal/policy.h"
+#include "jemalloc/internal/monitor.h"
 
 #undef JEMALLOC_H_TYPES
 /******************************************************************************/
@@ -489,6 +490,7 @@ static const bool config_ivsalloc =
 #include "jemalloc/internal/prof.h"
 #include "jemalloc/internal/cpu.h"
 #include "jemalloc/internal/policy.h"
+#include "jemalloc/internal/monitor.h"
 
 typedef struct {
 	uint64_t	allocated;
@@ -562,6 +564,7 @@ void	jemalloc_postfork_child(void);
 #include "jemalloc/internal/systemcall.h"
 #include "jemalloc/internal/cpu.h"
 #include "jemalloc/internal/policy.h"
+#include "jemalloc/internal/monitor.h"
 
 #undef JEMALLOC_H_EXTERNS
 /******************************************************************************/

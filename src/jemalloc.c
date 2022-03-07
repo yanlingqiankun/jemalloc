@@ -300,6 +300,10 @@ malloc_numa_init(){
 		malloc_mutex_unlock(&numa_lock);
 		return (true);
 	}
+	if (monitor_boot()) {
+		malloc_mutex_unlock(&numa_lock);
+		return (true);
+	}
 	numa_initialized = true;
 	malloc_mutex_unlock(&numa_lock);
 	return false;
