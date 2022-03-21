@@ -1,5 +1,6 @@
 #ifdef JEMALLOC_H_TYPES
 #ifdef __x86_64__
+#define PERF_INDEX_NUM 8   // cycle stalled-cycle + read write local_r local_w + upi_rx upi_tx
 typedef enum
 {
     NEHALEM_EP = 26,
@@ -54,6 +55,8 @@ typedef enum{
 }cpu_model_t;
 #endif 
 
+#define SOCKET_EVENT_MASK 0xff00
+
 typedef enum {
     INTEL,
     AMD,
@@ -67,11 +70,84 @@ typedef struct {
     int stepping;
 } cpu_info_t;
 
+typedef enum {
+    //CPU performance
+    STALL_CYCLE_BACK_END,
+    CYCLE,
+
+    // node performance record in core
+    MEMORY_READ,
+    MEMORY_WRITE,
+    LOCAL_READ,
+    LOCAL_WRITE,
+    
+    // uncore performance
+    UPI_RECEIVE,
+    UPI_TRANSMIT,
+} event_config;
+
+typedef enum {
+    CORE,
+    BUS,
+    SOCKET,
+    CPU
+} perf_range_t;
+
+typedef struct {
+    uint64_t nr;
+    uint64_t values[];
+} read_format;
+
+typedef struct {
+    perf_range_t range;
+    event_config config;
+    struct perf_event_attr attr;
+    read_format *read_fmt;
+    int id;
+    int fd;
+} event_s;
+
+typedef enum {
+    UPDATING,
+    INUSE,
+    SUCCESS,
+} status;
+
+typedef struct {
+    // unsigned int core_num;
+    unsigned int socket_num;
+    unsigned int bus_num;
+    unsigned int perf_num;
+
+    // cpu
+    uint64_t cpu_cycle;
+    uint64_t stalled_cycle;
+
+    // bus
+    int *link0;
+    int *link1;
+    uint64_t *bandwidth;
+
+    // socket
+    // uint64_t *remote_access;
+    uint64_t *local_access;
+    uint64_t *memory_access;
+
+    // index and perf_data_list
+    int *evesel_index;
+    event_s *evesel;
+
+    int *node_weights;
+
+    bool runing;
+}performance_t;
+
 #endif /* JEMALLOC_H_TYPES */
 /******************************************************************************/
 #ifdef JEMALLOC_H_EXTERNS
 
 bool monitor_boot();
+bool monitor_destroy();
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/

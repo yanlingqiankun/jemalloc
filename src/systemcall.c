@@ -18,3 +18,9 @@ long JEMALLOC_ATTR(weak) mbind(void *start, unsigned long len, int mode,
     return syscall(__NR_mbind, (long)start, len, mode, (long)nmask,
 				maxnode, flags);
 }
+
+int JEMALLOC_ATTR(weak) perf_event_open(struct perf_event_attr *attr, 
+    pid_t pid, int cpu, int group_fd, unsigned long flags)
+{
+    return syscall(__NR_perf_event_open, attr, pid, cpu, group_fd, flags);
+}
