@@ -23,7 +23,7 @@ void *place_pages(void *addr, size_t size) {
         return addr;
     }
     long ret = mbind(addr, size, mbind_interleave, cpu_topology.node_mask.maskp, 
-                        cpu_topology.node_mask.size+1, MPOL_MF_STRICT);    
+                        cpu_topology.node_mask.size+1, MPOL_MF_STRICT);
     
     if (ret) {
         chunk_unmap(addr, size);

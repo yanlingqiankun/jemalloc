@@ -236,11 +236,9 @@ set_nodemask_size(void)
 	while (getline(&buf, &bufsize, fp) > 0) {
 		if (strprefix(buf, nodemask_prefix)) {
 			nodemask_sz = s2nbits(buf + strlen(nodemask_prefix));
-			if (strncmp(buf,"Mems_allowed:",13) == 0) {
-				numa_all_nodes_ptr = numa_allocate_nodemask();
-				char *mask = strchr(buf, '\t') + 1;
-				numprocnode = read_mask(mask, numa_all_nodes_ptr);
-			}
+			numa_all_nodes_ptr = numa_allocate_nodemask();
+			char *mask = strchr(buf, '\t') + 1;
+			numprocnode = read_mask(mask, numa_all_nodes_ptr);
 			break;
 		}
 	}
@@ -339,7 +337,12 @@ bool cpu_topology_boot() {
     for (i = 0; i < max; i++)
         nodemask_set_compat((nodemask_t *)&numa_all_nodes, i);
 
-    cpu_topology.numa_nodes_num = nodemask_sz;
+    cpu_topology.numa_nodes_num = numprocnode;
 	cpu_topology.node_mask = *numa_all_nodes_ptr;
+	int core_num = sysconf(_SC_NPROCESSORS_CONF);
+	if (core_num == 0) {
+		return true;
+	}
+	cpu_topology.core_per_node = core_num / numprocnode;
     return false;
 }

@@ -8,7 +8,8 @@
 
 #define NULL_CHECK(CALL) \
 {\
-    if(CALL==NULL)\
+    long temp = CALL;\
+    if(temp==NULL)\
     {\
         return true;\
     } \
@@ -57,8 +58,12 @@ bool cpu_model_boot(){
 
 int read_event_type(char *filename){
     int type = -1;
-    FILE *type_file = fopen(filename, O_RDONLY);
+    FILE *type_file = fopen(filename, "r");
+    if (type_file == NULL) {
+        malloc_printf("failed to open file : %s\n", filename);
+    }
     fscanf(type_file, "%d", &type);
+    fclose(type_file);
     return type;
 }
 
@@ -69,7 +74,7 @@ void event_attr_init(struct perf_event_attr *attr, bool is_group, event_config c
     attr->sample_type = 0;
     attr->read_format = is_group ? PERF_FORMAT_GROUP : 0; /* PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING |
                           PERF_FORMAT_ID | PERF_FORMAT_GROUP ; */
-    attr->disabled = 0;
+    attr->disabled = 1;
     attr->inherit = 0;
     attr->pinned = 0;
     attr->exclusive = 0;
@@ -133,9 +138,9 @@ void event_attr_init(struct perf_event_attr *attr, bool is_group, event_config c
         return;
     
     perf_type_uncore_upi:;
-        char uncore_id_char[4];
-        sprintf(uncore_id_char, "%d", uncore_id);
-        attr->type = read_event_type(strcat("/sys/bus/event_source/devices/uncore_", uncore_id_char));
+        char filename_buf[64]; 
+        sprintf(filename_buf, "/sys/bus/event_source/devices/uncore_upi_%d/type", uncore_id);
+        attr->type = read_event_type(filename_buf);
         return;
 }
 
@@ -183,7 +188,7 @@ void init_evesel(event_s *evesel, perf_range_t range, event_config config, int u
             evesel->id = 1;
             evesel->range = range;
             event_attr_init(&evesel->attr, false, config, uncore_id);
-            evesel->fd = perf_event_open(&evesel->attr, -1, -1, -1, 0);
+            evesel->fd = perf_event_open(&evesel->attr, 0, -1, -1, 0);
             if (evesel->fd < 0) {
                 malloc_printf("failed to open event\n");
                 return 1;
