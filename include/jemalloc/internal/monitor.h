@@ -74,6 +74,10 @@ typedef enum {
     //CPU performance
     STALL_CYCLE_BACK_END,
     CYCLE,
+    CACHE_MISS,
+    CACHE_LOCAL_MISS,
+    INSTRUCTIONS,
+
 
     // node performance record in core
     MEMORY_READ,
@@ -84,6 +88,8 @@ typedef enum {
     // uncore performance
     UPI_RECEIVE,
     UPI_TRANSMIT,
+    IMC_READ,
+    IMC_WRITE
 } event_config;
 
 typedef enum {
@@ -118,10 +124,12 @@ typedef struct {
     unsigned int socket_num;
     unsigned int bus_num;
     unsigned int perf_num;
+    unsigned int imc_num;
 
     // cpu
     uint64_t cpu_cycle;
     uint64_t stalled_cycle;
+    uint64_t instructions;
 
     // bus
     int *link0;
@@ -130,8 +138,8 @@ typedef struct {
 
     // socket
     // uint64_t *remote_access;
-    uint64_t *local_access;
-    uint64_t *memory_access;
+    uint64_t *memory_read;
+    uint64_t *memory_write;
 
     // index and perf_data_list
     int *evesel_index;

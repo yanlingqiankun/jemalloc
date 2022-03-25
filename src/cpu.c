@@ -339,10 +339,10 @@ bool cpu_topology_boot() {
 
     cpu_topology.numa_nodes_num = numprocnode;
 	cpu_topology.node_mask = *numa_all_nodes_ptr;
-	int core_num = sysconf(_SC_NPROCESSORS_CONF);
-	if (core_num == 0) {
+	cpu_topology.core_num = sysconf(_SC_NPROCESSORS_CONF);
+	if (cpu_topology.core_num == 0) {
 		return true;
 	}
-	cpu_topology.core_per_node = core_num / numprocnode;
+	cpu_topology.core_per_node = cpu_topology.core_num / numprocnode;
     return false;
 }

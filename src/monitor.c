@@ -97,6 +97,9 @@ void event_attr_init(struct perf_event_attr *attr, bool is_group, event_config c
         case STALL_CYCLE_BACK_END:
             attr->config = PERF_COUNT_HW_STALLED_CYCLES_BACKEND;
             goto perf_type_hardware;
+        case INSTRUCTIONS:
+            attr->config = PERF_COUNT_HW_INSTRUCTIONS;
+            goto perf_type_hardware;
 
         case UPI_RECEIVE:
             attr->config = 0x03 | 0xF << 8 | MC_CH_PCI_PMON_CTL_EN;
@@ -105,6 +108,14 @@ void event_attr_init(struct perf_event_attr *attr, bool is_group, event_config c
         case UPI_TRANSMIT:
             attr->config = 0x02 | 0xF << 8 | MC_CH_PCI_PMON_CTL_EN;
             goto perf_type_uncore_upi;
+        
+        case IMC_READ:
+            attr->config = 0x04 | 0x3 << 8 | MC_CH_PCI_PMON_CTL_EN;
+            goto perf_type_uncore_imc;
+
+        case IMC_WRITE:
+            attr->config = 0x04 | 0xc << 8 | MC_CH_PCI_PMON_CTL_EN;
+            goto perf_type_uncore_imc;
 
         case MEMORY_READ:
             attr->config =  (PERF_COUNT_HW_CACHE_LL) |
@@ -138,10 +149,19 @@ void event_attr_init(struct perf_event_attr *attr, bool is_group, event_config c
         return;
     
     perf_type_uncore_upi:;
+    {
         char filename_buf[64]; 
         sprintf(filename_buf, "/sys/bus/event_source/devices/uncore_upi_%d/type", uncore_id);
         attr->type = read_event_type(filename_buf);
         return;
+    }
+    perf_type_uncore_imc:;
+    {
+        char filename_buf[64];
+        sprintf(filename_buf, "/sys/bus/event_source/devices/uncore_imc_%d/type", uncore_id);
+        attr->type = read_event_type(filename_buf);
+        return;
+    }
 }
 
 void init_evesel(event_s *evesel, perf_range_t range, event_config config, int uncore_id) {
@@ -255,47 +275,43 @@ void unfreeze() {
 
 bool collect_performance(){
     freeze();
-    memset(performance.local_access, 0, sizeof(uint64_t) * performance.socket_num);
-    memset(performance.memory_access, 0, sizeof(uint64_t) * performance.socket_num);
+    memset(performance.memory_read, 0, sizeof(uint64_t) * performance.socket_num);
+    memset(performance.memory_write, 0, sizeof(uint64_t) * performance.socket_num);
     int i;
     uint64_t temp_sum = 0;
-    uint64_t flits;
+    uint64_t bus_data;
     for(i = 0; i < performance.perf_num; ++i) {
         switch (performance.evesel[i].range)
         {
         case CPU:
             if (performance.evesel[i].config == CYCLE) {
                 read(performance.evesel[i].fd, &performance.cpu_cycle, sizeof(performance.cpu_cycle));
-            } else if (performance.evesel[i].config == STALL_CYCLE_BACK_END) {
-                read(performance.evesel[i].fd, &performance.stalled_cycle, sizeof(performance.stalled_cycle));
+            } else if (performance.evesel[i].config == INSTRUCTIONS) {
+                read(performance.evesel[i].fd, &performance.instructions, sizeof(performance.instructions));
             }
             break; 
         case SOCKET:
-            read(performance.evesel[i].fd, &performance.evesel[i].read_fmt, sizeof(read_format));
-            int j = 0;
-            for(j = 0; j < performance.evesel[i].read_fmt->nr; ++j) {
-                temp_sum += performance.evesel[i].read_fmt->values[j];
-            }
-            switch (performance.evesel[i].config) 
-            {
-                case MEMORY_READ:
-                case MEMORY_WRITE:
-                    performance.memory_access[performance.evesel[i].id] += temp_sum;
-                    break;                
-                case LOCAL_READ:
-                case LOCAL_WRITE:
-                    performance.local_access[performance.evesel[i].id] += temp_sum;
-                    break;
-            }
             break;
         case BUS:
-            read(performance.evesel[i].fd, &flits, sizeof(flits));
-            if (performance.evesel[i].config == UPI_RECEIVE) {
-                performance.bandwidth[performance.evesel[i].id] = (uint64_t) ( (double)flits / (64./(172./8.)) );
-            } else if (performance.evesel[i].config == UPI_TRANSMIT) {
-                performance.bandwidth[performance.evesel[2*i].id] = (uint64_t) ( (double)flits / (64./(172./8.)) );
-            }       
-            break;
+            read(performance.evesel[i].fd, &bus_data, sizeof(bus_data));
+            switch (performance.evesel[i].config)
+            {
+            case UPI_RECEIVE:
+                performance.bandwidth[performance.evesel[i].id] = (uint64_t) ( (double)bus_data / (64./(172./8.)) );
+                break;  
+            case UPI_TRANSMIT:
+                performance.bandwidth[performance.evesel[2*i].id] = (uint64_t) ( (double)bus_data / (64./(172./8.)) );
+                break;
+            case IMC_READ:
+                performance.memory_read[performance.evesel[i].id/performance.socket_num]
+                    += bus_data * 64;
+                break;
+            case IMC_WRITE:
+                performance.memory_write[performance.evesel[i].id / performance.socket_num] 
+                    += bus_data * 64;
+            default:
+                break;
+            }
         default:
             break;
         }
@@ -304,12 +320,31 @@ bool collect_performance(){
     unfreeze();
 }
 
+int get_imc_num() {
+    DIR *uncore_dir = opendir("/sys/bus/event_source/devices/");
+    if (!uncore_dir) {
+        malloc_printf("failed to open uncore dir\n");
+        return -1;
+    }
+    int i = 0;
+    do {
+        char str[64] ;
+        sprintf(str, "/sys/bus/event_source/devices/uncore_imc_%d", i);
+        DIR *d = readdir(str);
+        if (!d) {
+            return i - 1;
+        }
+        ++i;
+    } while (1);
+    return -1;
+}
+
 bool performance_boot() {
+    int uncore_num = 0;
+    performance.socket_num = cpu_topology.numa_nodes_num;
     switch (cpu_info.brand) {
-        int uncore_num = 0;
         case INTEL:
             switch (cpu_info.model) {
-                performance.socket_num = cpu_topology.numa_nodes_num;
                 case SKX:
                     if (cpu_topology.numa_nodes_num == 2){
                         uncore_num = 2;
@@ -320,23 +355,19 @@ bool performance_boot() {
                         INIT_LINK(1, 0, 1);
                     }
                     break;
-            }
-
+            }  
+            performance.imc_num = get_imc_num();
             NULL_CHECK(performance.bandwidth = (uint64_t *) malloc (sizeof(uint64_t) * performance.bus_num * 2));
-            performance.perf_num = performance.bus_num * 2 /*bus: UPI links : receive and transmit*/ + performance.socket_num * 4 /*memory_access and local_access*/ + 2 /*stall_cycle + cycle*/;
+            performance.perf_num = performance.bus_num * 2 /*bus: UPI links : receive and transmit*/ + performance.imc_num * 2 /*imc : read and write*/ + 2 /*stall_cycle + cycle*/;
             NULL_CHECK(performance.evesel = (event_s *) malloc (sizeof(event_s) * performance.perf_num));
-            NULL_CHECK(performance.evesel_index = (int *) malloc (sizeof(int) * (2 + 4 + 2 + 1)));
+            NULL_CHECK(performance.evesel_index = (int *) malloc (sizeof(int) * (2 + 2 + 2 + 1)));
             // NULL_CHECK(performance.remote_access = (int *) malloc (sizeof(uint64_t) * performance.socket_num * performance.socket_num));
-            NULL_CHECK(performance.local_access = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
-            NULL_CHECK(performance.memory_access = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
+            NULL_CHECK(performance.memory_read = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
+            NULL_CHECK(performance.memory_write = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
             int i = 0, j = 0, z = 0;
             performance.evesel_index[j] = i;
             init_evesel(&performance.evesel[i], CPU, CYCLE, -1);  i += 1; ++j; performance.evesel_index[j] = i;
-            init_evesel(&performance.evesel[i], CPU, STALL_CYCLE_BACK_END, -1); i += 1; ++j; performance.evesel_index[j] = i;
-            init_evesel(&performance.evesel[i], SOCKET, MEMORY_READ, -1); i += performance.socket_num; ++j; performance.evesel_index[j] = i;
-            init_evesel(&performance.evesel[i], SOCKET, MEMORY_WRITE, -1); i+= performance.socket_num; ++j; performance.evesel_index[j] = i;
-            init_evesel(&performance.evesel[i], SOCKET, LOCAL_READ, -1); i += performance.socket_num; ++j; performance.evesel_index[j] = i;
-            init_evesel(&performance.evesel[i], SOCKET, LOCAL_WRITE, -1); i += performance.socket_num; ++j; performance.evesel_index[j] = i;
+            init_evesel(&performance.evesel[i], CPU, INSTRUCTIONS, -1); i += 1; ++j; performance.evesel_index[j] = i;
             for(z = 0; z < performance.bus_num; ++z) {
                 init_evesel(&performance.evesel[i], BUS, UPI_RECEIVE, z);
             }
@@ -345,6 +376,14 @@ bool performance_boot() {
                 init_evesel(&performance.evesel[i], BUS, UPI_TRANSMIT, z);
             }
             i += performance.bus_num; ++j; performance.evesel_index[j] = i;
+            for(z = 0; z < performance.imc_num; ++z) {
+                init_evesel(&performance.evesel[i], BUS, IMC_READ, z);
+            }
+            i += performance.imc_num; ++j; performance.evesel_index[j] = i;
+             for(z = 0; z < performance.imc_num; ++z) {
+                init_evesel(&performance.evesel[i], BUS, IMC_WRITE, z);
+            }
+            i += performance.imc_num; ++j; performance.evesel_index[j] = i;
             break;
         case AMD:
             break;
@@ -374,5 +413,6 @@ bool monitor_boot(){
 }
 
 bool monitor_destroy(){
-
+    performance.runing = false;
+    return false;
 }

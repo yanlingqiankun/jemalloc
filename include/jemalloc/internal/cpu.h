@@ -27,6 +27,7 @@ struct bitmask {
 struct cpu_topology_s {
     unsigned numa_nodes_num;
     unsigned core_per_node;
+    unsigned core_num;
     struct bitmask node_mask;
 
     // nodes * nodes array
