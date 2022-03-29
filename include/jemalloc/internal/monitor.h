@@ -109,7 +109,8 @@ typedef struct {
     event_config config;
     struct perf_event_attr attr;
     read_format *read_fmt;
-    int id;
+    int u_id;    // uncore_id
+    int s_id; // socket_id
     int fd;
 } event_s;
 
