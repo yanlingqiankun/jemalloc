@@ -26,6 +26,8 @@ static struct bitmask *numa_memnode_ptr = NULL;
 nodemask_t numa_all_nodes;
 static int maxconfigurednode = -1;
 
+static struct bitmask **node_cpu_mask;
+
 bool numa_initialized = false;
 cpu_topology_t cpu_topology;
 
@@ -325,6 +327,106 @@ static inline void nodemask_set_compat(nodemask_t *mask, int node)
 		(1UL<<(node%(8*sizeof(unsigned long))));
 }
 
+numa_parse_bitmap(char *line, struct bitmask *mask)
+{
+	int i, ncpus;
+	char *p = strchr(line, '\n');
+	if (!p)
+		return -1;
+	ncpus = mask->size;
+
+	for (i = 0; p > line;i++) {
+		char *oldp, *endp;
+		oldp = p;
+		if (*p == ',')
+			--p;
+		while (p > line && *p != ',')
+			--p;
+		/* Eat two 32bit fields at a time to get longs */
+		if (p > line && sizeof(unsigned long) == 8) {
+			oldp--;
+			memmove(p, p+1, oldp-p+1);
+			while (p > line && *p != ',')
+				--p;
+		}
+		if (*p == ',')
+			p++;
+		if (i >= CPU_LONGS(ncpus))
+			return -1;
+		mask->maskp[i] = strtoul(p, &endp, 16);
+		if (endp != oldp)
+			return -1;
+		p--;
+	}
+	return 0;
+}
+
+bool init_node_mask() {
+	int node;
+	int len = 0;
+	FILE *f; 
+	char fn[64], *line;
+	for (node = 0; node < numprocnode; ++node) {
+		node_cpu_mask = numa_bitmask_alloc(cpu_topology.core_per_node * cpu_topology.numa_nodes_num);
+		sprintf(fn, "/sys/devices/system/node/node%d/cpumap", node);
+		f = fopen(fn, "r");
+		if (!f || getdelim(&line, &len, '\n', f) < 1) {
+			malloc_printf("failed to open cpumap\n");
+			return true;
+		}
+		if (line && numa_parse_bitmap(line, node_cpu_mask[node])) {
+			malloc_printf("failed to parse bitmap of cpumap\n");
+			return true;
+		}
+	}
+	return false;
+}
+
+static __always_inline int ffs_long (unsigned long word)
+{
+    
+	int num = 0;
+	if ((word & 0xffffffff) == 0) {
+    
+		num += 32;
+		word >>= 32;
+	}
+	if ((word & 0xffff) == 0) {
+    
+		num += 16;
+		word >>= 16;
+	}
+	if ((word & 0xff) == 0) {
+    
+		num += 8;
+		word >>= 8;
+	}
+	if ((word & 0xf) == 0) {
+    
+		num += 4;
+		word >>= 4;
+	}
+	if ((word & 0x3) == 0) {
+    
+		num += 2;
+		word >>= 2;
+	}
+	if ((word & 0x1) == 0)
+		num += 1;
+	return num;
+}
+
+int find_first_cpu_of_node(int node) {
+	struct bitmask * node_ptr = node_cpu_mask[node];
+	int ret = -1;
+	int i = 0; 
+	do{
+		ret = ffs_long(node_ptr->maskp[i]);
+		++i;
+	} while(ret < 0 && i < node_ptr->size);
+	return ret;
+}
+
 bool cpu_topology_boot() {
     if (numa_avail()) {
         return true;
@@ -344,5 +446,9 @@ bool cpu_topology_boot() {
 		return true;
 	}
 	cpu_topology.core_per_node = cpu_topology.core_num / numprocnode;
+	node_cpu_mask = (struct bitmask **) malloc (sizeof(struct bitmask *)*numprocnode); 
+	if (init_node_mask()) {
+		return true;
+	}
     return false;
 }

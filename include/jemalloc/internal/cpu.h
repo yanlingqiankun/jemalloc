@@ -43,6 +43,7 @@ extern cpu_topology_t cpu_topology;
 
 bool cpu_topology_boot();
 int numa_avail();
+int find_first_cpu_of_node(int);
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/

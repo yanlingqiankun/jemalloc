@@ -176,7 +176,7 @@ void init_evesel(event_s *evesel, perf_range_t range, event_config config, int u
             evesel->range = range;
             event_attr_init(&evesel->attr, false, config, uncore_id);
             evesel->fd = perf_event_open(&evesel->attr, -1, 
-                (socket_id + 1)*cpu_topology.core_per_node - 1 /* the last cpu core of the socket*/, -1, 0);
+                find_first_cpu_of_node(socket_id)/* the last cpu core of the socket*/, -1, 0);
             if (evesel->fd < 0) {
                 malloc_printf("failed to open event\n");
                 return 1;
