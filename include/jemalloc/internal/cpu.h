@@ -40,10 +40,17 @@ struct cpu_topology_s {
 #ifdef JEMALLOC_H_EXTERNS
 extern bool numa_initialized;
 extern cpu_topology_t cpu_topology;
+extern struct bitmask *numa_all_nodes_ptr;
+
 
 bool cpu_topology_boot();
 int numa_avail();
 int find_first_cpu_of_node(int);
+void copy_bitmask_to_bitmask(struct bitmask *bmpfrom, struct bitmask *bmpto);
+struct bitmask *numa_bitmask_alloc(unsigned int n);
+struct bitmask *numa_bitmask_clearbit(struct bitmask *bmp, unsigned int i);
+struct bitmask * numa_bitmask_setbit(struct bitmask *bmp, unsigned int i);
+int numa_bitmask_isbitset(const struct bitmask *bmp, unsigned int i);
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/

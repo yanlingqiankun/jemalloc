@@ -301,6 +301,10 @@ bool collect_performance(){
             break;
         }
     }
+    for(i = 0; i < performance.socket_num; ++i) {
+        performance.node_weights[i] = 1.0/performance.socket_num;
+        performance.nodes = i;
+    }
     reset();
     unfreeze();
 }

@@ -146,8 +146,8 @@ typedef struct {
     int *evesel_index;
     event_s *evesel;
 
-    int *node_weights;
-
+    float *node_weights;
+    int *nodes;
     bool runing;
 }performance_t;
 
@@ -157,6 +157,11 @@ typedef struct {
 
 bool monitor_boot();
 bool monitor_destroy();
+
+extern cpu_info_t cpu_info;
+extern performance_t performance;
+
+extern pthread_t monitor_thread_handle;
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/

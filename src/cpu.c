@@ -16,6 +16,13 @@ int numa_avail() {
 #define longsperbits(n) howmany(n, bitsperlong)
 #define bitsperint (8 * sizeof(unsigned int))
 
+#define BITS_PER_LONG (sizeof(long)*8)
+
+#define round_up(x,y) (((x) + (y) - 1) & ~((y)-1))
+
+#define CPU_BYTES(x) (round_up(x, BITS_PER_LONG)/8)
+#define CPU_LONGS(x) (CPU_BYTES(x) / sizeof(long))
+
 static const char *mask_size_file = "/proc/self/status";
 static const char *nodemask_prefix = "Mems_allowed:\t";
 static int nodemask_sz = 0;
@@ -167,6 +174,13 @@ struct bitmask *
 numa_bitmask_setbit(struct bitmask *bmp, unsigned int i)
 {
 	_setbit(bmp, i, 1);
+	return bmp;
+}
+
+struct bitmask *
+numa_bitmask_clearbit(struct bitmask *bmp, unsigned int i)
+{
+	_setbit(bmp, i, 0);
 	return bmp;
 }
 
@@ -367,7 +381,7 @@ bool init_node_mask() {
 	FILE *f; 
 	char fn[64], *line;
 	for (node = 0; node < numprocnode; ++node) {
-		node_cpu_mask = numa_bitmask_alloc(cpu_topology.core_per_node * cpu_topology.numa_nodes_num);
+		node_cpu_mask[node] = numa_bitmask_alloc(cpu_topology.core_per_node * cpu_topology.numa_nodes_num);
 		sprintf(fn, "/sys/devices/system/node/node%d/cpumap", node);
 		f = fopen(fn, "r");
 		if (!f || getdelim(&line, &len, '\n', f) < 1) {
@@ -380,6 +394,25 @@ bool init_node_mask() {
 		}
 	}
 	return false;
+}
+
+/*
+ * copy a bitmask map body to another bitmask body
+ * fill a larger destination with zeroes
+ */
+void
+copy_bitmask_to_bitmask(struct bitmask *bmpfrom, struct bitmask *bmpto)
+{
+	int bytes;
+
+	if (bmpfrom->size >= bmpto->size) {
+		memcpy(bmpto->maskp, bmpfrom->maskp, CPU_BYTES(bmpto->size));
+	} else if (bmpfrom->size < bmpto->size) {
+		bytes = CPU_BYTES(bmpfrom->size);
+		memcpy(bmpto->maskp, bmpfrom->maskp, bytes);
+		memset(((char *)bmpto->maskp)+bytes, 0,
+					CPU_BYTES(bmpto->size)-bytes);
+	}
 }
 
 static __always_inline int ffs_long (unsigned long word)
