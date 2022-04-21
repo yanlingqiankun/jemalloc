@@ -304,6 +304,12 @@ malloc_numa_init(){
 		malloc_mutex_unlock(&numa_lock);
 		return (true);
 	}
+#ifdef JEMALLOC_DEBUG
+	if (debug_file_boot()) {
+		malloc_mutex_unlock(&numa_lock);
+		return (true);
+	}
+#endif
 	numa_initialized = true;
 	malloc_mutex_unlock(&numa_lock);
 	return false;
@@ -967,6 +973,9 @@ je_malloc(size_t size)
 	}
 	UTRACE(0, size, ret);
 	JEMALLOC_VALGRIND_MALLOC(ret != NULL, ret, usize, false);
+#ifdef JEMALLOC_DEBUG
+	write_to_malloc(ret, size);
+#endif
 	return (ret);
 }
 
@@ -1327,10 +1336,13 @@ je_realloc(void *ptr, size_t size)
 void
 je_free(void *ptr)
 {
-
 	UTRACE(ptr, 0, 0);
-	if (ptr != NULL)
+	if (ptr != NULL){
+#ifdef JEMALLOC_DEBUG
+		write_to_free(ptr);
+#endif
 		ifree(ptr);
+	}
 }
 
 /*

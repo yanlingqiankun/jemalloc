@@ -23,6 +23,7 @@
 #  include <errno.h>
 #  include <linux/perf_event.h>
 #  include <dirent.h>
+#  include <sys/time.h>
 #endif
 #include <sys/types.h>
 
@@ -464,6 +465,7 @@ static const bool config_ivsalloc =
 #include "jemalloc/internal/cpu.h"
 #include "jemalloc/internal/policy.h"
 #include "jemalloc/internal/monitor.h"
+#include "jemalloc/internal/debug_file.h"
 
 #undef JEMALLOC_H_TYPES
 /******************************************************************************/

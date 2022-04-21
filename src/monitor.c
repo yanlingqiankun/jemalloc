@@ -258,52 +258,59 @@ bool collect_performance(){
     memset(performance.memory_read, 0, sizeof(uint64_t) * performance.socket_num);
     memset(performance.memory_write, 0, sizeof(uint64_t) * performance.socket_num);
     memset(performance.bandwidth, 0xff, sizeof(uint64_t) * performance.socket_num * performance.socket_num);
-    int i;
+    performance.all_memory_read = 0;
+    performance.all_memory_write = 0;
+    int i, j;
     uint64_t temp_sum = 0;
     uint64_t bus_data;
     for(i = 0; i < performance.perf_num; ++i) {
         switch (performance.evesel[i].range)
         {
-        case CPU:
-            if (performance.evesel[i].config == CYCLE) {
-                read(performance.evesel[i].fd, &performance.cpu_cycle, sizeof(performance.cpu_cycle));
-            } else if (performance.evesel[i].config == INSTRUCTIONS) {
-                read(performance.evesel[i].fd, &performance.instructions, sizeof(performance.instructions));
-            }
-            break; 
-        case SOCKET:
-            break;
-        case BUS:
-            read(performance.evesel[i].fd, &bus_data, sizeof(bus_data));
-            switch (performance.evesel[i].config)
-            {
-                // bandwidth transmit : bandwidth[i][j] socket_i ---> socket_j
-            case UPI_RECEIVE:
-                performance.bandwidth[
-                    performance.link1[performance.evesel[i].u_id] * performance.socket_num + performance.link0[performance.evesel[i].u_id]
-                    ] += (uint64_t) ( (double)bus_data / (64./(172./8.)) );
-                break;  
-            case UPI_TRANSMIT:
-                performance.bandwidth[
-                    performance.link0[performance.evesel[i].u_id] * performance.socket_num + performance.link1[performance.evesel[i].u_id]
-                    ] += (uint64_t) ( (double)bus_data / (64./(172./8.)));
+            case CPU:
+                if (performance.evesel[i].config == CYCLE) {
+                    read(performance.evesel[i].fd, &performance.cpu_cycle, sizeof(performance.cpu_cycle));
+                } else if (performance.evesel[i].config == INSTRUCTIONS) {
+                    read(performance.evesel[i].fd, &performance.instructions, sizeof(performance.instructions));
+                }
+                break; 
+            case SOCKET:
                 break;
-            case IMC_READ:
-                performance.memory_read[performance.evesel[i].s_id] += bus_data * 64;
-                break;
-            case IMC_WRITE:
-                performance.memory_write[performance.evesel[i].s_id] += bus_data * 64;
-                break;
+            case BUS:
+                read(performance.evesel[i].fd, &bus_data, sizeof(bus_data));
+                switch (performance.evesel[i].config)
+                {
+                        // bandwidth transmit : bandwidth[i][j] socket_i ---> socket_j
+                    case UPI_RECEIVE:
+                        performance.bandwidth[
+                            performance.link1[performance.evesel[i].u_id] * performance.socket_num + performance.link0[performance.evesel[i].u_id]
+                            ] += (uint64_t) ( (double)bus_data / (64./(172./8.)) );
+                        break;  
+                    case UPI_TRANSMIT:
+                        performance.bandwidth[
+                            performance.link0[performance.evesel[i].u_id] * performance.socket_num + performance.link1[performance.evesel[i].u_id]
+                            ] += (uint64_t) ( (double)bus_data / (64./(172./8.)));
+                        break;
+                    case IMC_READ:
+                        performance.memory_read[performance.evesel[i].s_id] += bus_data * 64;
+                        performance.all_memory_read += bus_data * 64;
+                        break;
+                    case IMC_WRITE:
+                        performance.memory_write[performance.evesel[i].s_id] += bus_data * 64;
+                        performance.all_memory_write += bus_data * 64;
+                        break;
+                    default:
+                        break;
+                }
             default:
                 break;
-            }
-        default:
-            break;
         }
     }
     for(i = 0; i < performance.socket_num; ++i) {
-        performance.node_weights[i] = 1.0/performance.socket_num;
-        performance.nodes = i;
+        for(j = 0; j < performance.socket_num; ++j){
+            
+        }
+        // performance.node_weights[i] = 1.0/performance.socket_num;
+        // performance.nodes[i] = i;
     }
     reset();
     unfreeze();
@@ -355,6 +362,8 @@ bool performance_boot() {
             // NULL_CHECK(performance.remote_access = (int *) malloc (sizeof(uint64_t) * performance.socket_num * performance.socket_num));
             NULL_CHECK(performance.memory_read = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
             NULL_CHECK(performance.memory_write = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
+            NULL_CHECK(performance.node_weights = (float *) malloc(sizeof(float) * performance.socket_num));
+            NULL_CHECK(performance.nodes = (int *) malloc(sizeof(int) * performance.socket_num));
             int i = 0, j = 0, z = 0;
             performance.evesel_index[j] = i;
             init_evesel(&performance.evesel[i], CPU, CYCLE, -1, -1);  i += 1; ++j; performance.evesel_index[j] = i;

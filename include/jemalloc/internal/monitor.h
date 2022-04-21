@@ -149,6 +149,9 @@ typedef struct {
     float *node_weights;
     int *nodes;
     bool runing;
+
+    uint64_t all_memory_write;
+    uint64_t all_memory_read;
 }performance_t;
 
 #endif /* JEMALLOC_H_TYPES */
