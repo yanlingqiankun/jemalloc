@@ -3,8 +3,9 @@
 
 bool debug_file_boot()
 
-bool write_to_malloc(void *ptr, uint64_t size);
-bool write_to_free(void *ptr);
+void write_to_malloc(void *ptr, uint64_t size);
+void write_to_free(void *ptr);
+void write_performance_info();
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/

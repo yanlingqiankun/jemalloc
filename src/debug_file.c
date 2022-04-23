@@ -8,26 +8,34 @@ bool debug_file_boot() {
     return false;
 }
 
-bool write_to_malloc(void *ptr, uint64_t size) {
+void write_to_malloc(void *ptr, uint64_t size) {
     if(__glibc_likely(is_file_open)) {
         char write_buffer[64];
         struct timeval start_time;
         gettimeofday(&start_time, NULL);
-        malloc_printf("[LIFETIME-START] %p %ld %ld %ld\n", ptr, size, start_time.tv_sec, start_time.tv_usec);
-        return false;
+        malloc_printf("[L_S] %p %ld %ld %ld\n", ptr, size, start_time.tv_sec, start_time.tv_usec);  // lifetime-start
     }
-    return true;
 }
 
-bool write_to_free(void *ptr) {
+void write_to_free(void *ptr) {
     if (__glibc_likely(is_file_open)) {
         char write_buffer[64];
         struct timeval end_time;
         gettimeofday(&end_time, NULL);
-        malloc_printf("[LIFETIME-END] %p %ld %ld\n", ptr, end_time.tv_sec, end_time.tv_usec);
-        return false;
+        malloc_printf("[L_E] %p %ld %ld\n", ptr, end_time.tv_sec, end_time.tv_usec); // lifetime-end
     }
-    return true;
+}
+
+void write_performance_info() {
+    malloc_printf("[P_I] %ld %ld %ld %ld %ld %ld %ld %ld\n", 
+    performance.memory_read[0],
+    performance.memory_read[1], 
+    performance.memory_write[0],
+    performance.memory_write[1],
+    performance.bandwidth[0],
+    performance.bandwidth[1],
+    performance.bandwidth[2],
+    performance.bandwidth[3]); // performance-information
 }
 
 #endif

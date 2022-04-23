@@ -305,6 +305,9 @@ bool collect_performance(){
                 break;
         }
     }
+#ifdef JEMALLOC_DEBUG
+    write_performance_info();
+#endif 
     for(i = 0; i < performance.socket_num; ++i) {
         for(j = 0; j < performance.socket_num; ++j){
             
