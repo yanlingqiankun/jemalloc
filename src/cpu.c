@@ -5,6 +5,7 @@
 #include <dirent.h>
 
 int numa_avail() {
+	// return 0 if numa is available
     if (get_mempolicy(NULL, NULL, 0, 0, 0) < 0 && errno == ENOSYS)
         return -1;
     return 0;
