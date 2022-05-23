@@ -8,7 +8,8 @@
 
 #define NULL_CHECK(CALL) \
 {\
-    long temp = CALL;\
+    void *temp ;\
+    temp = CALL;\
     if(temp==NULL)\
     {\
         return true;\
@@ -179,7 +180,6 @@ void init_evesel(event_s *evesel, perf_range_t range, event_config config, int u
                 find_first_cpu_of_node(socket_id)/* the last cpu core of the socket*/, -1, 0);
             if (evesel->fd < 0) {
                 malloc_printf("failed to open event\n");
-                return 1;
             }
             break;
         case CPU: 
@@ -191,7 +191,6 @@ void init_evesel(event_s *evesel, perf_range_t range, event_config config, int u
             evesel->fd = perf_event_open(&evesel->attr, 0, -1, -1, 0);
             if (evesel->fd < 0) {
                 malloc_printf("failed to open event\n");
-                return 1;
             }
         break;
         default:
@@ -363,8 +362,8 @@ bool performance_boot() {
             NULL_CHECK(performance.evesel = (event_s *) malloc (sizeof(event_s) * performance.perf_num));
             NULL_CHECK(performance.evesel_index = (int *) malloc (sizeof(int) * (2 + 2 + 2 + 1)));
             // NULL_CHECK(performance.remote_access = (int *) malloc (sizeof(uint64_t) * performance.socket_num * performance.socket_num));
-            NULL_CHECK(performance.memory_read = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
-            NULL_CHECK(performance.memory_write = (int *) malloc (sizeof(uint64_t) * performance.socket_num));
+            NULL_CHECK(performance.memory_read = (uint64_t *) malloc (sizeof(uint64_t) * performance.socket_num));
+            NULL_CHECK(performance.memory_write = (uint64_t *) malloc (sizeof(uint64_t) * performance.socket_num));
             NULL_CHECK(performance.node_weights = (float *) malloc(sizeof(float) * performance.socket_num));
             NULL_CHECK(performance.nodes = (int *) malloc(sizeof(int) * performance.socket_num));
             int i = 0, j = 0, z = 0;

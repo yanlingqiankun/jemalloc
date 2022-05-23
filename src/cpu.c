@@ -12,7 +12,6 @@ int numa_avail() {
 }
 
 // copy from libnuma
-#define howmany(x,y) (((x)+((y)-1))/(y))
 #define bitsperlong (8 * sizeof(unsigned long))
 #define longsperbits(n) howmany(n, bitsperlong)
 #define bitsperint (8 * sizeof(unsigned int))
@@ -185,6 +184,25 @@ numa_bitmask_clearbit(struct bitmask *bmp, unsigned int i)
 	return bmp;
 }
 
+char *
+strcasestr(const char *s, const char *find)
+{
+	char c, sc;
+	size_t len;
+	if ((c = *find++) != 0) {
+		c = (char)tolower((unsigned char)c);
+		len = strlen(find);
+		do {
+			do {
+				if ((sc = *s++) == 0)
+					return (NULL);
+			} while ((char)tolower((unsigned char)sc) != c);
+		} while (strncasecmp(s, find, len) != 0);
+		s--;
+	}
+	return ((char *)s);
+}
+
 int
 numa_bitmask_isbitset(const struct bitmask *bmp, unsigned int i)
 {
@@ -194,7 +212,7 @@ numa_bitmask_isbitset(const struct bitmask *bmp, unsigned int i)
 /* (cache the result?) */
 long long numa_node_size64(int node, long long *freep)
 {
-	size_t len = 0;
+	size_t len;
 	char *line = NULL;
 	long long size = -1;
 	FILE *f;
@@ -342,7 +360,7 @@ static inline void nodemask_set_compat(nodemask_t *mask, int node)
 		(1UL<<(node%(8*sizeof(unsigned long))));
 }
 
-numa_parse_bitmap(char *line, struct bitmask *mask)
+int numa_parse_bitmap(char *line, struct bitmask *mask)
 {
 	int i, ncpus;
 	char *p = strchr(line, '\n');
@@ -378,7 +396,7 @@ numa_parse_bitmap(char *line, struct bitmask *mask)
 
 bool init_node_mask() {
 	int node;
-	int len = 0;
+	size_t len = 0;
 	FILE *f; 
 	char fn[64], *line;
 	for (node = 0; node < numprocnode; ++node) {

@@ -9,10 +9,6 @@ void *je_base_alloc(size_t size) {
     return malloc(size);
 }
 
-void write_performance_info() {
-    
-}
-
 int main() {
     if (cpu_topology_boot()){
         return 1;
