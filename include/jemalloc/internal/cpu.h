@@ -47,10 +47,12 @@ bool cpu_topology_boot();
 int numa_avail();
 int find_first_cpu_of_node(int);
 void copy_bitmask_to_bitmask(struct bitmask *bmpfrom, struct bitmask *bmpto);
+struct bitmask *get_cpu_mask(int node_id);
 struct bitmask *numa_bitmask_alloc(unsigned int n);
 struct bitmask *numa_bitmask_clearbit(struct bitmask *bmp, unsigned int i);
 struct bitmask * numa_bitmask_setbit(struct bitmask *bmp, unsigned int i);
 int numa_bitmask_isbitset(const struct bitmask *bmp, unsigned int i);
+void numa_bitmask_free(struct bitmask *bmp);
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/

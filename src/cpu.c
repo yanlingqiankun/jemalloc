@@ -434,6 +434,15 @@ copy_bitmask_to_bitmask(struct bitmask *bmpfrom, struct bitmask *bmpto)
 	}
 }
 
+struct bitmask *get_cpu_mask(int node_id) {
+	if (node_id >= maxconfigurednode && !node_cpu_mask) {
+		return NULL;
+	}
+	struct bitmask *ret = numa_bitmask_alloc(cpu_topology.core_per_node * cpu_topology.numa_nodes_num);
+	copy_bitmask_to_bitmask(node_cpu_mask[node_id], ret);
+	return ret;
+}
+
 static __always_inline int ffs_long (unsigned long word)
 {
     
@@ -477,6 +486,17 @@ int find_first_cpu_of_node(int node) {
 		++i;
 	} while(ret < 0 && i < node_ptr->size);
 	return ret;
+}
+
+void
+numa_bitmask_free(struct bitmask *bmp)
+{
+	if (bmp == 0)
+		return;
+	free(bmp->maskp);
+	bmp->maskp = (unsigned long *)0xdeadcdef;  /* double free tripwire */
+	free(bmp);
+	return;
 }
 
 bool cpu_topology_boot() {

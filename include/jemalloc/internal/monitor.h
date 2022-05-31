@@ -158,7 +158,7 @@ typedef struct {
 /******************************************************************************/
 #ifdef JEMALLOC_H_EXTERNS
 
-bool monitor_boot();
+bool monitor_boot(unsigned int usec);
 bool monitor_destroy();
 
 extern cpu_info_t cpu_info;

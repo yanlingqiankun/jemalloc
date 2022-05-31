@@ -413,4 +413,3 @@ u2rz
 cpu_topology_boot
 policy_boot
 place_pages
-monitor_boot
