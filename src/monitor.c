@@ -280,22 +280,32 @@ bool collect_performance(){
                 {
                         // bandwidth transmit : bandwidth[i][j] socket_i ---> socket_j
                     case UPI_RECEIVE:
-                        performance.bandwidth[
+                        // performance.bandwidth[
+                        //     performance.link1[performance.evesel[i].u_id] * performance.socket_num + performance.link0[performance.evesel[i].u_id]
+                        //     ] += (uint64_t) ( (double)bus_data / (64./(172./8.)) );
+                         performance.bandwidth[
                             performance.link1[performance.evesel[i].u_id] * performance.socket_num + performance.link0[performance.evesel[i].u_id]
-                            ] += (uint64_t) ( (double)bus_data / (64./(172./8.)) );
+                            ] += bus_data;
                         break;  
                     case UPI_TRANSMIT:
+                        // performance.bandwidth[
+                        //     performance.link0[performance.evesel[i].u_id] * performance.socket_num + performance.link1[performance.evesel[i].u_id]
+                        //     ] += (uint64_t) ( (double)bus_data / (64./(172./8.)));
                         performance.bandwidth[
-                            performance.link0[performance.evesel[i].u_id] * performance.socket_num + performance.link1[performance.evesel[i].u_id]
-                            ] += (uint64_t) ( (double)bus_data / (64./(172./8.)));
+                                performance.link0[performance.evesel[i].u_id] * performance.socket_num + performance.link1[performance.evesel[i].u_id]
+                                ] += bus_data;
                         break;
                     case IMC_READ:
-                        performance.memory_read[performance.evesel[i].s_id] += bus_data * 64;
-                        performance.all_memory_read += bus_data * 64;
+                        // performance.memory_read[performance.evesel[i].s_id] += bus_data * 64;
+                        // performance.all_memory_read += bus_data * 64;
+                        performance.memory_read[performance.evesel[i].s_id] += bus_data;
+                        performance.all_memory_read += bus_data;
                         break;
                     case IMC_WRITE:
-                        performance.memory_write[performance.evesel[i].s_id] += bus_data * 64;
-                        performance.all_memory_write += bus_data * 64;
+                        // performance.memory_write[performance.evesel[i].s_id] += bus_data * 64;
+                        // performance.all_memory_write += bus_data * 64;
+                        performance.memory_write[performance.evesel[i].s_id] += bus_data;
+                        performance.all_memory_write += bus_data;
                         break;
                     default:
                         break;

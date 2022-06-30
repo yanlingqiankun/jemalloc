@@ -3,12 +3,12 @@
 #include <sched.h>
 
 #define BACKGROUND_MEM_SIZE 1 << 22
-#define TASK_MEM_SIZE 1 << 20
+#define TASK_MEM_SIZE 1 << 30
 #define TASK_LOOP 20
-#define MONITOR_INTERNAL 10
+#define MONITOR_INTERVAL 10000
+#define INIT_INTERVAL 11000
 
 volatile bool finish;
-FILE *bandwidth_file;
 
 void je_malloc_printf(const char *__restrict __format, ...){
     va_list valist;
@@ -34,27 +34,27 @@ typedef struct
 } task_t;
 
 #ifdef __x86_64__
-int get_task(task_t *t) {
+int get_task(task_t **t) {
     switch (cpu_info.brand)
     {
         case INTEL:
-            switch (cpu_info.family) 
+            switch (cpu_info.model) 
             {
-                case 85:
+                case SKX:
                     if (cpu_topology.numa_nodes_num == 2) {
-                        t = (task_t *)malloc(sizeof(task_t) * 2);
-                        if (!t) {
+                        *t = (task_t *)malloc(sizeof(task_t) * 2);
+                        if (!(*t)) {
                             return -1;
                         }
-                        t[0].tt = NtoM;
-                        t[0].node1 = 0;
-                        t[0].counter1 = &performance.memory_write[0];
-                        t[1].tt = NtoN;
-                        t[1].node1 = 0;
-                        t[1].node2 = 1;
-                        t[1].counter1 = &performance.memory_write[0];
-                        t[1].counter2 = &performance.bandwidth[2];
-                        return 1;
+                        (*t)[0].tt = NtoM;
+                        (*t)[0].node1 = 0;
+                        (*t)[0].counter1 = &performance.memory_write[0];
+                        (*t)[1].tt = NtoN;
+                        (*t)[1].node1 = 0;
+                        (*t)[1].node2 = 1;
+                        (*t)[1].counter1 = &performance.memory_write[0];
+                        (*t)[1].counter2 = &performance.bandwidth[2];
+                        return 2;
                     }
             }
             break;
@@ -110,13 +110,19 @@ void *write_background(void *buffer) {
     } else if (t.tt == NtoN) {
         memory = numa_alloc_onnode(BACKGROUND_MEM_SIZE, t.node2);
     }
-    if (!memory) return;
-    while (!finish) {
-        usleep(usec);
-        memset(memory, 0, BACKGROUND_MEM_SIZE);
+    if (!memory) return NULL;
+    if (usec == 0) {
+        while (!finish) {
+            memset(memory, 0, BACKGROUND_MEM_SIZE);
+        }
+    } else {
+         while (!finish) {
+            usleep(usec);
+            memset(memory, 0, BACKGROUND_MEM_SIZE);
+        }
     }
     numa_free(memory, BACKGROUND_MEM_SIZE);
-    return;
+    return memory;
 }
 
 void *write_task(void *buffer){
@@ -135,9 +141,20 @@ void *write_task(void *buffer){
     for(i = 0; i < TASK_LOOP; ++i) {
         memset(memory, 0, TASK_MEM_SIZE);
     }
+    numa_free(memory, TASK_MEM_SIZE);
+    return memory;
 }
 
-void execute_task (task_t t) {
+void execute_task (task_t t, int id) {
+    char filename[128]; 
+    FILE *bandwidth_file;
+    sprintf(filename, "./bandwidth_%d.txt", id);
+    bandwidth_file = fopen(filename, "w");
+    if (!bandwidth_file) {
+        printf("failed to open file\n");
+        return;
+    }
+
     struct timeval start, end;
     int i;
     unsigned int usec = 0;
@@ -149,8 +166,9 @@ void execute_task (task_t t) {
     CPU_ZERO(&mask);
     struct bitmask *cpumask = get_cpu_mask(t.node1);
     memcpy(mask.__bits, cpumask->maskp, cpumask->size/sizeof(unsigned long));
-    for (; thread_num < cpu_topology.core_per_node/2; ++thread_num) {
-        for(; usec < 1; usec *= 10) {
+    for (; thread_num < cpu_topology.core_per_node; ++thread_num) {
+        for(usec = 0; usec <= 1e6; usec *= 10) {
+            bp = buffer;
             finish = false;
             memcpy(bp, &t, sizeof(task_t)); bp += sizeof(task_t);
             memcpy(bp, &usec, sizeof(unsigned int)); bp += sizeof(unsigned int);
@@ -166,20 +184,26 @@ void execute_task (task_t t) {
                     printf("failed to set affinity\n");
                 }
             }
+            usleep(INIT_INTERVAL);
             uint64_t status = 0;
             if (t.tt == NtoM) {
                 for(i = 0; i < 10; ++i) {
                     status += *t.counter1;
-                    usleep(10e5);
+                    usleep(MONITOR_INTERVAL);
+                }
+            } else {
+                for(i = 0; i < 10; ++i) {
+                    status += *t.counter2;
+                    usleep(MONITOR_INTERVAL);
                 }
             }
             status = status / 10;
-            status = status * (10e6 / MONITOR_INTERNAL);
+            status = status * (1e6 / MONITOR_INTERVAL);
             pthread_t write_task_p;
 
             gettimeofday(&start, NULL);
             pthread_create(&write_task_p, NULL, write_task, buffer);
-            int aff_ret = pthread_setaffinity_np(p[i], sizeof(cpu_set_t), &mask);
+            int aff_ret = pthread_setaffinity_np(write_task_p, sizeof(cpu_set_t), &mask);
             if (aff_ret) {
                 printf("failed to set affinity\n");
             }
@@ -189,11 +213,16 @@ void execute_task (task_t t) {
             for(i = 0; i < thread_num; ++i) {
                 pthread_join(p[i], NULL);
             }
-            uint64_t bandwidth = TASK_MEM_SIZE * TASK_LOOP / (end.tv_sec - start.tv_sec);
-            fprintf(bandwidth_file, "%lu\t%lu\n", status, bandwidth);
+            long temp = TASK_MEM_SIZE;
+            double diff_time = (end.tv_sec - start.tv_sec + (end.tv_usec - start.tv_usec) / 1000000.0);
+            uint64_t bandwidth = temp * TASK_LOOP / diff_time;
+            fprintf(bandwidth_file, "%d\t%lu\t%lu\n", id, status, bandwidth);
+            printf("%uus-%dthreads : \t%lu\t%lu\n", usec, i, status, bandwidth);
+            fflush(bandwidth_file);
+            usec += 1;
         }
-        fflush(bandwidth_file);
     }
+    fclose(bandwidth_file);
 }
 
 int main() {
@@ -202,21 +231,18 @@ int main() {
     if (cpu_topology_boot()){
         return 1;
     }
-    if (monitor_boot(MONITOR_INTERNAL)) {
+    if (monitor_boot(MONITOR_INTERVAL)) {
         return 1;
     }
 
-    int ret = get_task(t);
+    int ret = get_task(&t);
     if (ret <= 0) {
         return ret;
     }
-    bandwidth_file = fopen("./bandwidth.txt", "w");
-    if (!bandwidth_file) {
-        printf("failed to open file\n");
-        return 1;
-    }
+    
+
     for(i = 0; i < ret; ++i) {
-        execute_task(t[i]);
+        execute_task(t[i], i);
     }
-    fclose(bandwidth_file);
+    return 0;
 }
