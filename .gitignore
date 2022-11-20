@@ -72,3 +72,5 @@ test/include/test/jemalloc_test_defs.h
 /VERSION
 .idea
 .vscode
+
+*.txt
