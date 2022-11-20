@@ -25,6 +25,7 @@
 #  include <dirent.h>
 #  include <sys/time.h>
 #  include <sys/ioctl.h>
+#  include <sched.h>
 #endif
 #include <sys/types.h>
 
@@ -570,6 +571,7 @@ void	jemalloc_postfork_child(void);
 #include "jemalloc/internal/cpu.h"
 #include "jemalloc/internal/policy.h"
 #include "jemalloc/internal/monitor.h"
+#include "jemalloc/internal/graph.h"
 
 #undef JEMALLOC_H_EXTERNS
 /******************************************************************************/

@@ -108,10 +108,21 @@ void update_weight_inside(node *n, int bus_type, uint64_t bl, float *w, int *d, 
     return;
 }
 
+void compute_percent(float *array, int len) {
+    int i;
+    float sum = 0;
+    for(i = 0; i < len; ++i)
+        sum += array[i];
+    for(i = 0; i < len; ++i)
+        array[i] /= sum;
+    return;
+}
+
 void update_weight(){
     int i;
     for(i  = 0; i < performance.socket_num; ++i) {
         int temp_d, temp_b;
         update_weight_inside(&root[i], 4, INFINITY, &weight[i*performance.socket_num], temp_d, temp_b);
+        compute_percent(&weight[i*performance.socket_num], performance.socket_num);
     }
 }

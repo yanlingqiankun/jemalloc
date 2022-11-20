@@ -316,16 +316,23 @@ bool collect_performance(){
     }
 #ifdef JEMALLOC_DEBUG
     write_performance_info();
-#endif 
-    for(i = 0; i < performance.socket_num; ++i) {
-        for(j = 0; j < performance.socket_num; ++j){
-            
-        }
-        // performance.node_weights[i] = 1.0/performance.socket_num;
-        // performance.nodes[i] = i;
-    }
+#endif
+    switch (cpu_info.brand) {
+        case INTEL:
+            switch (cpu_info.model) {
+                case SKX:
+                    if (cpu_topology.numa_nodes_num == 2){
+                        traffic[0] = performance.memory_read[0] + performance.memory_write[0];
+                        traffic[1] = performance.bandwidth[1];
+                        traffic[2] = performance.memory_read[1] + performance.memory_write[1];
+                    }
+                    break;
+            }
+            break;
+    }  
     reset();
     unfreeze();
+    update_weight();
 }
 
 int get_imc_num() {

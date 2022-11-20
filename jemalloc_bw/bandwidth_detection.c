@@ -2,13 +2,14 @@
 #include "../include/jemalloc/internal/jemalloc_internal.h"
 #include <sched.h>
 
-#define BACKGROUND_MEM_SIZE 1 << 22
+#define BACKGROUND_MEM_SIZE 1 << 24
 #define TASK_MEM_SIZE 1 << 30
-#define TASK_LOOP 20
-#define MONITOR_INTERVAL 10000
+#define TASK_LOOP 5
+#define MONITOR_INTERVAL 1000
 #define INIT_INTERVAL 11000
 
 volatile bool finish;
+FILE *bandwidth_file;
 
 void je_malloc_printf(const char *__restrict __format, ...){
     va_list valist;
@@ -145,16 +146,7 @@ void *write_task(void *buffer){
     return memory;
 }
 
-void execute_task (task_t t, int id) {
-    char filename[128]; 
-    FILE *bandwidth_file;
-    sprintf(filename, "./bandwidth_%d.txt", id);
-    bandwidth_file = fopen(filename, "w");
-    if (!bandwidth_file) {
-        printf("failed to open file\n");
-        return;
-    }
-
+void execute_task (task_t t, FILE *bandwidth_file) {
     struct timeval start, end;
     int i;
     unsigned int usec = 0;
@@ -167,7 +159,7 @@ void execute_task (task_t t, int id) {
     struct bitmask *cpumask = get_cpu_mask(t.node1);
     memcpy(mask.__bits, cpumask->maskp, cpumask->size/sizeof(unsigned long));
     for (; thread_num < cpu_topology.core_per_node; ++thread_num) {
-        for(usec = 0; usec <= 1e6; usec *= 10) {
+        for(usec = 0; usec <= 1e7; usec *= 10) {
             bp = buffer;
             finish = false;
             memcpy(bp, &t, sizeof(task_t)); bp += sizeof(task_t);
@@ -189,12 +181,12 @@ void execute_task (task_t t, int id) {
             if (t.tt == NtoM) {
                 for(i = 0; i < 10; ++i) {
                     status += *t.counter1;
-                    usleep(MONITOR_INTERVAL);
+                    usleep(1e5);
                 }
             } else {
                 for(i = 0; i < 10; ++i) {
                     status += *t.counter2;
-                    usleep(MONITOR_INTERVAL);
+                    usleep(1e5);
                 }
             }
             status = status / 10;
@@ -216,11 +208,11 @@ void execute_task (task_t t, int id) {
             long temp = TASK_MEM_SIZE;
             double diff_time = (end.tv_sec - start.tv_sec + (end.tv_usec - start.tv_usec) / 1000000.0);
             uint64_t bandwidth = temp * TASK_LOOP / diff_time;
-            fprintf(bandwidth_file, "%d\t%lu\t%lu\n", id, status, bandwidth);
+            fprintf(bandwidth_file, "%lu\t%lu\n", status, bandwidth);
             printf("%uus-%dthreads : \t%lu\t%lu\n", usec, i, status, bandwidth);
-            fflush(bandwidth_file);
             usec += 1;
         }
+        fflush(bandwidth_file);
     }
     fclose(bandwidth_file);
 }
@@ -229,9 +221,11 @@ int main() {
     task_t *t;
     int i;
     if (cpu_topology_boot()){
+        printf("failed to boot cpu_topology\n");
         return 1;
     }
     if (monitor_boot(MONITOR_INTERVAL)) {
+        printf("failed to boot monitor\n");
         return 1;
     }
 
@@ -239,10 +233,16 @@ int main() {
     if (ret <= 0) {
         return ret;
     }
-    
-
     for(i = 0; i < ret; ++i) {
-        execute_task(t[i], i);
+        char filename[128]; 
+        FILE *bandwidth_file;
+        sprintf(filename, "./bandwidth_%d.txt", i);
+        bandwidth_file = fopen(filename, "w");
+        if (!bandwidth_file) {
+            printf("failed to open file\n");
+            return ;
+        }
+        execute_task(t[i], bandwidth_file);
     }
     return 0;
 }
