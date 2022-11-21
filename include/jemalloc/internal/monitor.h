@@ -56,6 +56,7 @@ typedef enum{
 #endif 
 
 #define SOCKET_EVENT_MASK 0xff00
+#define MONITOR_INTERVAL 1000000
 
 typedef enum {
     INTEL,
@@ -158,7 +159,7 @@ typedef struct {
 /******************************************************************************/
 #ifdef JEMALLOC_H_EXTERNS
 
-bool monitor_boot(unsigned int usec);
+bool monitor_boot();
 bool monitor_destroy();
 
 extern cpu_info_t cpu_info;

@@ -287,7 +287,9 @@ malloc_thread_init(void)
 }
 
 static bool 
-malloc_numa_init(){	
+malloc_numa_init(){
+#ifdef GENERATE_SUCCESS
+	malloc_printf("numa_init\n");
 	malloc_mutex_lock(&numa_lock);
 	if (numa_initialized) {
 		return true;
@@ -300,7 +302,11 @@ malloc_numa_init(){
 		malloc_mutex_unlock(&numa_lock);
 		return (true);
 	}
-	if (monitor_boot(100000)) {
+	if (monitor_boot()) {
+		malloc_mutex_unlock(&numa_lock);
+		return (true);
+	}
+	if (graph_boot()){
 		malloc_mutex_unlock(&numa_lock);
 		return (true);
 	}
@@ -311,7 +317,8 @@ malloc_numa_init(){
 	}
 #endif
 	numa_initialized = true;
-	malloc_mutex_unlock(&numa_lock);
+	malloc_mutex_unlock(&numa_lock);	
+#endif
 	return false;
 }
 

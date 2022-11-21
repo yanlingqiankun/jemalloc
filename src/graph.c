@@ -3,6 +3,8 @@
 #define MAX(x, y) x > y ? x : y
 #define MIN(x, y) x < y ? x : y 
 #define INFINITY 1 << 63
+extern unsigned long traffic[BUS_NUM];
+extern float weight[C*M];
 
 typedef struct Node{
     int num_children;
@@ -21,7 +23,7 @@ node *root;
 #define BUS_4(x) 1 << 63
 #define BUS(x, num) BUS##_num(x)
 
-bool graph_init() {
+bool graph_boot() {
     root_num = 2;
     node temp_node_0[2]; 
     {
@@ -79,7 +81,7 @@ bool graph_init() {
     // init extern values
     traffic[0] = traffic[1] = traffic[2] = 0;
     weight[0] = weight[1] = weight[2] = weight[3] = 0.5;
-
+    return false;
 }
 
 void update_weight_inside(node *n, int bus_type, uint64_t bl, float *w, int *d, uint64_t *b){

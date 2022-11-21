@@ -7,7 +7,6 @@
 extern unsigned long traffic[BUS_NUM];
 extern float weight[C*M];
 
+bool graph_boot();
 void update_weight();
 #endif
-
-

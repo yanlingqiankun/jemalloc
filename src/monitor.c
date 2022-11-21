@@ -417,14 +417,13 @@ bool performance_boot() {
 }
 
 void *monitor_task(void *para) {
-    unsigned int usec = *(unsigned int *)para;
     while (performance.runing){
         collect_performance();
-        usleep(usec);
+        usleep(MONITOR_INTERVAL);
     }
 }
 
-bool monitor_boot(unsigned int usec){
+bool monitor_boot(){
     if (cpu_model_boot()) {
         return (true);
     }
@@ -432,7 +431,7 @@ bool monitor_boot(unsigned int usec){
         return (true);
     }
     performance.runing = true;
-    pthread_create(&monitor_thread_handle, NULL, monitor_task, (void *)&usec);
+    pthread_create(&monitor_thread_handle, NULL, monitor_task, NULL);
     return false;
 }
 
