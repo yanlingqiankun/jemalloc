@@ -24,3 +24,7 @@ int JEMALLOC_ATTR(weak) perf_event_open(struct perf_event_attr *attr,
 {
     return syscall(__NR_perf_event_open, attr, pid, cpu, group_fd, flags);
 }
+
+int JEMALLOC_ATTR(weak) getcpu(unsigned int *core, unsigned int *socket) {
+    return syscall(__NR_getcpu, core, socket, NULL);
+}

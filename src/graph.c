@@ -3,8 +3,8 @@
 #define MAX(x, y) x > y ? x : y
 #define MIN(x, y) x < y ? x : y 
 #define INFINITY 1 << 63
-extern unsigned long traffic[BUS_NUM];
-extern float weight[C*M];
+unsigned long traffic[BUS_NUM];
+float weight[C*M];
 
 typedef struct Node{
     int num_children;
@@ -21,7 +21,20 @@ node *root;
 #define BUS_2(x) (-3.59563965e-10)*x*x-(3.69836472e-01)*x+2.78174121e+09
 #define BUS_1(x) (-1.52224248e-16)*x*x*x+(3.37122384e-08)*x*x-2.30076880*x+4.36546674e+09
 #define BUS_4(x) 1 << 63
-#define BUS(x, num) BUS##_num(x)
+// #define BUS(x, num) BUS##_num(x)
+
+inline uint64_t get_bandwidth(int type, uint64_t x) {
+    switch (type){
+        case 0:
+            return (-3.59563965e-10)*x*x-(3.69836472e-01)*x+2.78174121e+09;
+        case 1:
+            return (-1.52224248e-16)*x*x*x+(3.37122384e-08)*x*x-2.30076880*x+4.36546674e+09;
+        case 2:
+            return (-3.59563965e-10)*x*x-(3.69836472e-01)*x+2.78174121e+09;
+        default:
+            return 1 << 63;
+    }
+}
 
 bool graph_boot() {
     root_num = 2;
@@ -85,7 +98,7 @@ bool graph_boot() {
 }
 
 void update_weight_inside(node *n, int bus_type, uint64_t bl, float *w, int *d, uint64_t *b){
-    uint64_t bw = BUS(bus_type, traffic[bus_type]);
+    uint64_t bw = get_bandwidth(bus_type, traffic[bus_type]);
     n->bottleneck = MIN(bw, bl);
     int d_num = 0;
     uint64_t b_sum = 0;
