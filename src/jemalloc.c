@@ -298,15 +298,15 @@ malloc_numa_init(){
 		malloc_mutex_unlock(&numa_lock);
 		return (true);
 	}
+	if (graph_boot()){
+		malloc_mutex_unlock(&numa_lock);
+		return (true);
+	}
 	if (policy_boot()) {
 		malloc_mutex_unlock(&numa_lock);
 		return (true);
 	}
 	if (monitor_boot()) {
-		malloc_mutex_unlock(&numa_lock);
-		return (true);
-	}
-	if (graph_boot()){
 		malloc_mutex_unlock(&numa_lock);
 		return (true);
 	}
