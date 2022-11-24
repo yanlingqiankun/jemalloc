@@ -329,10 +329,12 @@ bool collect_performance(){
                     break;
             }
             break;
-    }  
+    }
     reset();
     unfreeze();
+#ifndef MODELING
     update_weight();
+#endif
 }
 
 int get_imc_num() {

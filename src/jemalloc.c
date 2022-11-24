@@ -2037,6 +2037,7 @@ _malloc_prefork(void)
 		return;
 #endif
 	assert(malloc_initialized);
+	assert(numa_initialized);
 
 	/* Acquire all mutexes in a safe order. */
 	ctl_prefork();

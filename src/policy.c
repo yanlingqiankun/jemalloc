@@ -45,7 +45,7 @@ long mbind_pages_with_weight(float *weights, void *addr, unsigned long size) {
         temp_addr += s;
     }
     numa_bitmask_setbit(mbind_mask, i);
-    return mbind(temp_addr, size-(temp_addr - addr), mbind_bind, mbind_mask,
+    return mbind(temp_addr, size-(temp_addr - addr), mbind_bind, mbind_mask->maskp,
                         cpu_topology.node_mask.size, MPOL_MF_STRICT);
 }
 
