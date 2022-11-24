@@ -57,11 +57,11 @@ node root[2];
 inline uint64_t get_bandwidth(int type, uint64_t x) {
     switch (type){
         case 0:
-            return (-3.59563965e-10)*x*x-(3.69836472e-01)*x+2.78174121e+09;
+            return (-2.45359624e-05)*x*x-(1.74399448e+02)*x+4.34751169e+09;
         case 1:
-            return (-1.52224248e-16)*x*x*x+(3.37122384e-08)*x*x-2.30076880*x+4.36546674e+09;
+            return (5.74926687e-14)*x*x*x-(3.79110616e-06)*x*x+2.22916838e+01*x+2.61373026e+09;
         case 2:
-            return (-3.59563965e-10)*x*x-(3.69836472e-01)*x+2.78174121e+09;
+            return (-2.45359624e-05)*x*x-(1.74399448e+02)*x+4.34751169e+09;
         default:
             return 1 << 63;
     }
@@ -79,7 +79,8 @@ bool graph_boot() {
     INIT_NODES_0(root[1].children[1].children[0], 2, 0)
     // init extern values
     traffic[0] = traffic[1] = traffic[2] = 0;
-    weight[0] = weight[1] = weight[2] = weight[3] = 0.5;
+    weight[0] = weight[3] = 0.62;
+    weight[1] = weight[2] = 0.37;
     return false;
 }
 
