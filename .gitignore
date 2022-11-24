@@ -74,3 +74,5 @@ test/include/test/jemalloc_test_defs.h
 .vscode
 
 *.txt
+
+jemalloc_bw/bandwidth_detection
