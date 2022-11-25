@@ -5,7 +5,7 @@
 #define GENERATE_SUCCESS
 
 extern unsigned long traffic[BUS_NUM];
-extern float weight[C*M];
+extern double weight[C*M];
 
 bool graph_boot();
 void update_weight();

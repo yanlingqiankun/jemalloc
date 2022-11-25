@@ -2,15 +2,15 @@
 
 #define MAX(x, y) x > y ? x : y
 #define MIN(x, y) x < y ? x : y 
-#define INFINITY 1 << 63
+#define INFINITY 1 << 31
 
 #define INIT_NODES_2(root, in_merge_addr, in_id, in_bus_type1, in_bus_type2) { \
 root.children = (node *)malloc(2*sizeof(node)); \
 root.bus_type = (int *)malloc(2*sizeof(int));   \
 root.node_id = in_id;                           \
-root.num_children = 0;                       \
+root.num_children = 2;                       \
 root.merge_addr = in_merge_addr;                \
-root.bottleneck = 1 << 62;                   \
+root.bottleneck = INFINITY;                   \
 root.bus_type[0] = in_bus_type1;                \
 root.bus_type[1] = in_bus_type2;\
 }
@@ -19,9 +19,9 @@ root.bus_type[1] = in_bus_type2;\
 root.children = (node *)malloc(sizeof(node)); \
 root.bus_type = (int *)malloc(sizeof(int));   \
 root.node_id = in_id;                           \
-root.num_children = 0;                       \
+root.num_children = 1;                       \
 root.merge_addr = in_merge_addr;                \
-root.bottleneck = 1 << 62;                   \
+root.bottleneck = INFINITY;                   \
 root.bus_type[0] = in_bus_type1;                \
 }
 
@@ -31,11 +31,11 @@ root.bus_type = NULL;                        \
 root.node_id = in_id;                           \
 root.num_children = 0;                       \
 root.merge_addr = in_merge_addr;                \
-root.bottleneck = 1 << 62;\
+root.bottleneck = INFINITY;\
 }
 
 unsigned long traffic[BUS_NUM];
-float weight[C*M];
+double weight[C*M];
 
 typedef struct Node{
     int num_children;
@@ -48,12 +48,6 @@ typedef struct Node{
 int root_num;
 node root[2];
 
-#define BUS_0(x) (-3.59563965e-10)*x*x-(3.69836472e-01)*x+2.78174121e+09
-#define BUS_2(x) (-3.59563965e-10)*x*x-(3.69836472e-01)*x+2.78174121e+09
-#define BUS_1(x) (-1.52224248e-16)*x*x*x+(3.37122384e-08)*x*x-2.30076880*x+4.36546674e+09
-#define BUS_4(x) 1 << 63
-// #define BUS(x, num) BUS##_num(x)
-
 inline uint64_t get_bandwidth(int type, uint64_t x) {
     switch (type){
         case 0:
@@ -63,7 +57,7 @@ inline uint64_t get_bandwidth(int type, uint64_t x) {
         case 2:
             return (-2.45359624e-05)*x*x-(1.74399448e+02)*x+4.34751169e+09;
         default:
-            return 1 << 63;
+            return INFINITY;
     }
 }
 
@@ -84,7 +78,7 @@ bool graph_boot() {
     return false;
 }
 
-void update_weight_inside(node *n, int bus_type, uint64_t bl, float *w, int *d, uint64_t *b){
+void update_weight_inside(node *n, int bus_type, uint64_t bl, double *w, int *d, uint64_t *b){
     uint64_t bw = get_bandwidth(bus_type, traffic[bus_type]);
     n->bottleneck = MIN(bw, bl);
     int d_num = 0;
@@ -103,16 +97,16 @@ void update_weight_inside(node *n, int bus_type, uint64_t bl, float *w, int *d, 
             }
         }
     } else {
-        w[n->merge_addr] = n->bottleneck;
+        w[n->node_id] = n->bottleneck;
     }
     *d = d_num;
     *b = b_sum;
     return;
 }
 
-void compute_percent(float *array, int len) {
+void compute_percent(double *array, int len) {
     int i;
-    float sum = 0;
+    double sum = 0;
     for(i = 0; i < len; ++i)
         sum += array[i];
     for(i = 0; i < len; ++i)

@@ -8,7 +8,7 @@ bool policy_boot() {
     return (false);
 }
 
-JEMALLOC_INLINE int get_max(float *array, int len) {
+JEMALLOC_INLINE int get_max(double *array, int len) {
     int i, ret = 0;
     for(i = 0; i < len; i++) {
         if (array[i] > array[ret]){
@@ -18,7 +18,7 @@ JEMALLOC_INLINE int get_max(float *array, int len) {
     return ret;
 }
 
-long mbind_pages_with_weight_ordered(float *weights, void *addr, unsigned long size){
+long mbind_pages_with_weight_ordered(double *weights, void *addr, unsigned long size){
     int i, j; size_t s;
     int max_index = 0, sec_max_index = 0, first_loop = 1;
     max_index = get_max(weights, performance.socket_num);
@@ -47,7 +47,7 @@ long mbind_pages_with_weight_ordered(float *weights, void *addr, unsigned long s
                         cpu_topology.node_mask.size, MPOL_MF_STRICT);
 }
 
-long mbind_pages_with_weight(float *weights, void *addr, unsigned long size) {
+long mbind_pages_with_weight(double *weights, void *addr, unsigned long size) {
     int i; size_t s;
     void *temp_addr = addr;
     struct bitmask *mbind_mask = numa_bitmask_alloc(cpu_topology.node_mask.size);
