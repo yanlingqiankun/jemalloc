@@ -289,7 +289,6 @@ malloc_thread_init(void)
 static bool 
 malloc_numa_init(){
 #ifdef GENERATE_SUCCESS
-	malloc_printf("numa_init\n");
 	malloc_mutex_lock(&numa_lock);
 	if (numa_initialized) {
 		return true;
