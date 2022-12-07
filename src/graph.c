@@ -36,6 +36,7 @@ root.bottleneck = INFINITY;\
 
 unsigned long traffic[BUS_NUM];
 double weight[C*M];
+int memory_traffic_index[M];
 
 typedef struct Node{
     int num_children;
@@ -51,11 +52,11 @@ node root[2];
 inline uint64_t get_bandwidth(int type, uint64_t x) {
     switch (type){
         case 0:
-            return (-2.45359624e-05)*x*x-(1.74399448e+02)*x+4.34751169e+09;
+            return (-1.57769804e-08)*x*x*x+(1.99967877e-03)*x*x+(-4.69729161e+01)*x+(4.01794573e+09);
         case 1:
-            return (5.74926687e-14)*x*x*x-(3.79110616e-06)*x*x+2.22916838e+01*x+2.61373026e+09;
+            return (4.54173636e-16)*x*x*x*x+(-1.91913837e-09)*x*x*x+(1.91131896e-03)*x*x+(-7.32919718e+02)*x+(2.63997693e+09);
         case 2:
-            return (-2.45359624e-05)*x*x-(1.74399448e+02)*x+4.34751169e+09;
+            return (-1.57769804e-08)*x*x*x+(1.99967877e-03)*x*x+(-4.69729161e+01)*x+(4.01794573e+09);
         default:
             return INFINITY;
     }
@@ -75,6 +76,8 @@ bool graph_boot() {
     traffic[0] = traffic[1] = traffic[2] = 0;
     weight[0] = weight[3] = 0.62;
     weight[1] = weight[2] = 0.37;
+    memory_traffic_index[0] = 0;
+    memory_traffic_index[1] = 2;
     return false;
 }
 

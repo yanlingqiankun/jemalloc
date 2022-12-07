@@ -381,6 +381,10 @@ struct arena_s {
 
 	/* bins is used to store trees of free regions. */
 	arena_bin_t		bins[NBINS];
+
+	/* field for numa optimization*/
+	int					node_id;
+	struct bitmask		*node_mask;
 };
 
 #endif /* JEMALLOC_H_STRUCTS */

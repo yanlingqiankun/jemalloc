@@ -597,7 +597,7 @@ ctl_grow(void)
 		memcpy(arenas, arenas_old, ctl_stats.narenas *
 		    sizeof(arena_t *));
 		narenas_total++;
-		arenas_extend(narenas_total - 1);
+		arenas_extend(narenas_total - 1, -1);
 		malloc_mutex_unlock(&arenas_lock);
 		/*
 		 * Deallocate arenas_old only if it came from imalloc() (not
@@ -1203,7 +1203,7 @@ thread_arena_ctl(const size_t *mib, size_t miblen, void *oldp, size_t *oldlenp,
 		/* Initialize arena if necessary. */
 		malloc_mutex_lock(&arenas_lock);
 		if ((arena = arenas[newind]) == NULL && (arena =
-		    arenas_extend(newind)) == NULL) {
+		    arenas_extend(newind, -1)) == NULL) {
 			malloc_mutex_unlock(&arenas_lock);
 			ret = EAGAIN;
 			goto label_return;

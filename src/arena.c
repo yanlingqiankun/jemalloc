@@ -556,6 +556,7 @@ arena_chunk_init_hard(arena_t *arena)
 	chunk = (arena_chunk_t *)chunk_alloc(chunksize, chunksize, false,
 	    &zero, arena->dss_prec);
 	malloc_mutex_lock(&arena->lock);
+	mbind_chunk(chunk, chunksize, arena->node_id);
 	if (chunk == NULL)
 		return (NULL);
 	if (config_stats)
@@ -603,7 +604,6 @@ arena_chunk_init_hard(arena_t *arena)
 	}
 	arena_mapbits_unallocated_set(chunk, chunk_npages-1, arena_maxclass,
 	    unzeroed);
-
 	return (chunk);
 }
 

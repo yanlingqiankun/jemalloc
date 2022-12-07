@@ -115,12 +115,15 @@ static bool	malloc_init_hard(void);
 
 /* Create a new arena and insert it into the arenas array at index ind. */
 arena_t *
-arenas_extend(unsigned ind)
+arenas_extend(unsigned ind, int node_id)
 {
 	arena_t *ret;
 
 	ret = (arena_t *)base_alloc(sizeof(arena_t));
 	if (ret != NULL && arena_new(ret, ind) == false) {
+		ret->node_id = node_id;
+		if (node_id >= 0) 
+			ret->node_mask = get_cpu_mask(node_id);
 		arenas[ind] = ret;
 		return (ret);
 	}
@@ -184,17 +187,18 @@ choose_arena_hard(void)
 			ret = arenas[choose];
 		} else {
 			/* Initialize a new arena. */
-			ret = arenas_extend(first_null);
+			ret = arenas_extend(first_null, get_node_of_arena());
 		}
 		ret->nthreads++;
 		malloc_mutex_unlock(&arenas_lock);
+		__sync_fetch_and_add(&threads_num_of_node[ret->node_id], 1);
 	} else {
 		ret = arenas[0];
 		malloc_mutex_lock(&arenas_lock);
 		ret->nthreads++;
 		malloc_mutex_unlock(&arenas_lock);
 	}
-
+	
 	arenas_tsd_set(&ret);
 
 	return (ret);
@@ -772,7 +776,7 @@ malloc_init_hard(void)
 	 * Initialize one arena here.  The rest are lazily created in
 	 * choose_arena_hard().
 	 */
-	arenas_extend(0);
+	arenas_extend(0, -1);
 	if (arenas[0] == NULL) {
 		malloc_mutex_unlock(&init_lock);
 		return (true);

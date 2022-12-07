@@ -539,7 +539,7 @@ extern arena_t		**arenas;
 extern unsigned		narenas_total;
 extern unsigned		narenas_auto; /* Read-only after initialization. */
 
-arena_t	*arenas_extend(unsigned ind);
+arena_t	*arenas_extend(unsigned ind, int node_id);
 void	arenas_cleanup(void *arg);
 arena_t	*choose_arena_hard(void);
 void	jemalloc_prefork(void);

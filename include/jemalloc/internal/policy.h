@@ -43,9 +43,12 @@ typedef enum {
 #ifdef JEMALLOC_H_EXTERNS
 
 mbind_t mbind_policy;
+extern int *threads_num_of_node;
 
 bool policy_boot();
 void * place_pages(void *addr, size_t size);
+int get_node_of_arena();
+void *mbind_chunk(void *addr, size_t size, int node_id);
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/
