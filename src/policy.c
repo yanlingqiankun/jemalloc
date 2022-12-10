@@ -3,12 +3,11 @@
 //
 #include "jemalloc/internal/jemalloc_internal.h"
 
-int *threads_num_of_node;
+int threads_num_of_node[M];
 
 bool policy_boot() {
     mbind_policy = MBIND_DEFAULT;
-    threads_num_of_node = malloc(sizeof(int)*cpu_topology.numa_nodes_num);
-    memset(threads_num_of_node, 0, sizeof(int)*cpu_topology.numa_nodes_num);
+    memset(threads_num_of_node, 0, sizeof(int)*M);
     return (false);
 }
 
@@ -116,7 +115,7 @@ int get_node_of_arena(){
 }
 
 void *mbind_chunk(void *addr, size_t size, int node_id){
-    if (node_id >= 0 && numa_initialized == false){
+    if (node_id < 0 || numa_initialized == false){
         return addr;
     } 
     struct bitmask *mbind_mask = numa_bitmask_alloc(cpu_topology.node_mask.size);

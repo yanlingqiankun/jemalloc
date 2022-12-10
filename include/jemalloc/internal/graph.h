@@ -2,6 +2,7 @@
 #define C 2
 #define M 2
 #define BUS_NUM 3
+#define PHYSICAL_CORE_NUM 14
 #define GENERATE_SUCCESS
 
 extern unsigned long traffic[BUS_NUM];

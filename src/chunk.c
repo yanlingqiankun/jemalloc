@@ -206,6 +206,7 @@ label_return:
 			VALGRIND_MAKE_MEM_UNDEFINED(ret, size);
 	}
 	assert(CHUNK_ADDR2BASE(ret) == ret);
+	return ret;
 }
 
 static void

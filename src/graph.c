@@ -49,7 +49,7 @@ typedef struct Node{
 int root_num;
 node root[2];
 
-inline uint64_t get_bandwidth(int type, uint64_t x) {
+uint64_t get_bandwidth(int type, uint64_t x) {
     switch (type){
         case 0:
             return (-1.57769804e-08)*x*x*x+(1.99967877e-03)*x*x+(-4.69729161e+01)*x+(4.01794573e+09);

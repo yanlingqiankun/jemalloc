@@ -569,9 +569,9 @@ void	jemalloc_postfork_child(void);
 #include "jemalloc/internal/prof.h"
 #include "jemalloc/internal/systemcall.h"
 #include "jemalloc/internal/cpu.h"
+#include "jemalloc/internal/graph.h"
 #include "jemalloc/internal/policy.h"
 #include "jemalloc/internal/monitor.h"
-#include "jemalloc/internal/graph.h"
 
 #undef JEMALLOC_H_EXTERNS
 /******************************************************************************/
