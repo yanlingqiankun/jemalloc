@@ -101,17 +101,18 @@ void *place_pages(void *addr, size_t size) {
     return addr;
 }
 
-int get_node_of_arena(){
-    int i;
+int get_node_of_thread(){
+    int i, min_idx = 0;
     for(i = 0; i < M; ++i) {
-        if(threads_num_of_node[i] < cpu_topology.numa_nodes_num) {
-            if(get_bandwidth(memory_traffic_index[i], traffic[memory_traffic_index[i]]) 
-                < 0.9 * get_bandwidth(memory_traffic_index[i], 0)) 
+        min_idx = threads_num_of_node[min_idx] < threads_num_of_node[i] ? min_idx : i ;
+        if(get_bandwidth(memory_traffic_index[i], traffic[memory_traffic_index[i]]) 
+                < 0.9 * get_bandwidth(memory_traffic_index[i], 0))
+            if(threads_num_of_node[i] < PHYSICAL_CORE_NUM) {
             continue;
             return i;
         }
     }
-    return -1;
+    return min_idx;
 }
 
 void *mbind_chunk(void *addr, size_t size, int node_id){
@@ -126,4 +127,15 @@ void *mbind_chunk(void *addr, size_t size, int node_id){
         return NULL;
     }
     return addr;
+}
+
+void schedule_myself_to_arena(arena_t *arena){
+    cpu_set_t mask;
+    pthread_t myself = pthread_self();
+    CPU_ZERO(&mask);
+    memcpy(mask.__bits, arena->node_mask->maskp, arena->node_mask->size/sizeof(sizeof(unsigned long)));
+    if (pthread_setaffinity_np(myself, sizeof(cpu_set_t), &mask)) {
+        malloc_printf("error to schedule thread %ld to node %d\n", myself, arena->node_id);
+    }
+    return;
 }

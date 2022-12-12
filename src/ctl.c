@@ -597,7 +597,7 @@ ctl_grow(void)
 		memcpy(arenas, arenas_old, ctl_stats.narenas *
 		    sizeof(arena_t *));
 		narenas_total++;
-		arenas_extend(narenas_total - 1, -1);
+		arenas_extend(narenas_total - 1, 0);
 		malloc_mutex_unlock(&arenas_lock);
 		/*
 		 * Deallocate arenas_old only if it came from imalloc() (not

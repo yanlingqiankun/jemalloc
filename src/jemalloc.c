@@ -147,15 +147,16 @@ arena_t *
 choose_arena_hard(void)
 {
 	arena_t *ret;
+	int node_id = get_node_of_thread();
 
 	if (narenas_auto > 1) {
 		unsigned i, choose, first_null;
 
-		choose = 0;
+		choose = node_id;
 		first_null = narenas_auto;
 		malloc_mutex_lock(&arenas_lock);
 		assert(arenas[0] != NULL);
-		for (i = 1; i < narenas_auto; i++) {
+		for (i = node_id + M; i < narenas_auto; i = i + M) {
 			if (arenas[i] != NULL) {
 				/*
 				 * Choose the first arena that has the lowest
@@ -187,7 +188,7 @@ choose_arena_hard(void)
 			ret = arenas[choose];
 		} else {
 			/* Initialize a new arena. */
-			ret = arenas_extend(first_null, get_node_of_arena());
+			ret = arenas_extend(first_null, node_id);
 		}
 		ret->nthreads++;
 		malloc_mutex_unlock(&arenas_lock);
@@ -200,7 +201,7 @@ choose_arena_hard(void)
 	}
 	
 	arenas_tsd_set(&ret);
-
+	schedule_myself_to_arena(ret);
 	return (ret);
 }
 
@@ -776,7 +777,7 @@ malloc_init_hard(void)
 	 * Initialize one arena here.  The rest are lazily created in
 	 * choose_arena_hard().
 	 */
-	arenas_extend(0, -1);
+	arenas_extend(0, 0);
 	if (arenas[0] == NULL) {
 		malloc_mutex_unlock(&init_lock);
 		return (true);
