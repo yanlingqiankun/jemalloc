@@ -124,6 +124,8 @@ arenas_extend(unsigned ind, int node_id)
 		ret->node_id = node_id;
 		if (node_id >= 0) 
 			ret->node_mask = get_cpu_mask(node_id);
+		else
+			ret->node_mask = NULL;
 		arenas[ind] = ret;
 		return (ret);
 	}
@@ -179,17 +181,22 @@ choose_arena_hard(void)
 			}
 		}
 
-		if (arenas[choose]->nthreads == 0
+		if(!arenas[choose]){
+			ret = arenas_extend(choose, node_id);
+		} else {
+			if (arenas[choose]->nthreads == 0
 		    || first_null == narenas_auto) {
 			/*
 			 * Use an unloaded arena, or the least loaded arena if
 			 * all arenas are already initialized.
 			 */
 			ret = arenas[choose];
-		} else {
-			/* Initialize a new arena. */
-			ret = arenas_extend(first_null, node_id);
+			} else {
+				/* Initialize a new arena. */
+				ret = arenas_extend(first_null, node_id);
+			}
 		}
+		
 		ret->nthreads++;
 		malloc_mutex_unlock(&arenas_lock);
 		__sync_fetch_and_add(&threads_num_of_node[ret->node_id], 1);
@@ -777,7 +784,7 @@ malloc_init_hard(void)
 	 * Initialize one arena here.  The rest are lazily created in
 	 * choose_arena_hard().
 	 */
-	arenas_extend(0, 0);
+	arenas_extend(0, -1);
 	if (arenas[0] == NULL) {
 		malloc_mutex_unlock(&init_lock);
 		return (true);

@@ -46,9 +46,9 @@ mbind_t mbind_policy;
 extern int threads_num_of_node[M];
 
 bool policy_boot();
-void * place_pages(void *addr, size_t size);
+void *place_pages(void *addr, size_t size);
 int get_node_of_thread();
-void *mbind_chunk(void *addr, size_t size, int node_id);
+void *mbind_chunk(void *addr, size_t size, arena_t *arena);
 void schedule_myself_to_arena(arena_t *arena);
 
 #endif /* JEMALLOC_H_EXTERNS */

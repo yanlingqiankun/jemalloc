@@ -115,10 +115,13 @@ int get_node_of_thread(){
     return min_idx;
 }
 
-void *mbind_chunk(void *addr, size_t size, int node_id){
-    if (node_id < 0 || numa_initialized == false){
+void *mbind_chunk(void *addr, size_t size, arena_t *arena){
+    if (numa_initialized == false){
         return addr;
-    } 
+    }
+    if (!arena->node_mask)
+        return addr;
+    int node_id = arena->node_id;
     struct bitmask *mbind_mask = numa_bitmask_alloc(cpu_topology.node_mask.size);
     numa_bitmask_setbit(mbind_mask, node_id);
     long ret = mbind(addr, size, mbind_bind, mbind_mask->maskp, cpu_topology.node_mask.size, MPOL_MF_STRICT);
@@ -126,10 +129,13 @@ void *mbind_chunk(void *addr, size_t size, int node_id){
         malloc_printf("failed to mind chunk %p with errno = %d\n", addr, errno);
         return NULL;
     }
-    return addr;
+    return;
 }
 
 void schedule_myself_to_arena(arena_t *arena){
+    if (!arena->node_mask) {
+        return;
+    }
     cpu_set_t mask;
     pthread_t myself = pthread_self();
     CPU_ZERO(&mask);

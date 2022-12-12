@@ -556,7 +556,7 @@ arena_chunk_init_hard(arena_t *arena)
 	chunk = (arena_chunk_t *)chunk_alloc(chunksize, chunksize, false,
 	    &zero, arena->dss_prec);
 	malloc_mutex_lock(&arena->lock);
-	mbind_chunk(chunk, chunksize, arena->node_id);
+	mbind_chunk(chunk, chunksize, arena);
 	if (chunk == NULL)
 		return (NULL);
 	if (config_stats)
