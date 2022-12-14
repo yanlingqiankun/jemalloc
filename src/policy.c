@@ -105,18 +105,18 @@ int get_node_of_thread(){
     int i, min_idx = 0;
     for(i = 0; i < M; ++i) {
         min_idx = threads_num_of_node[min_idx] < threads_num_of_node[i] ? min_idx : i ;
-        if(get_bandwidth(memory_traffic_index[i], traffic[memory_traffic_index[i]]) 
-                < 0.9 * get_bandwidth(memory_traffic_index[i], 0))
+        if(get_bandwidth(memory_traffic_index[i], traffic[memory_traffic_index[i]]) * 10 
+                > 9 * get_bandwidth(memory_traffic_index[i], 0)){
             if(threads_num_of_node[i] < PHYSICAL_CORE_NUM) {
-            continue;
-            return i;
+                return i;
+            }
         }
     }
     return min_idx;
 }
 
 void *mbind_chunk(void *addr, size_t size, arena_t *arena){
-    if (numa_initialized == false){
+    if (!arena->node_mask || numa_initialized == false){
         return addr;
     }
     if (!arena->node_mask)
