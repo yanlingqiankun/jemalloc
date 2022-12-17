@@ -149,14 +149,13 @@ arena_t *
 choose_arena_hard(void)
 {
 	arena_t *ret;
-	int node_id = get_node_of_thread();
-
 	if (narenas_auto > 1) {
 		unsigned i, choose, first_null;
 
-		choose = node_id;
 		first_null = narenas_auto;
 		malloc_mutex_lock(&arenas_lock);
+		int node_id = get_node_of_thread();
+		choose = node_id;
 		assert(arenas[0] != NULL);
 		for (i = node_id + M; i < narenas_auto; i = i + M) {
 			if (arenas[i] != NULL) {
@@ -198,8 +197,8 @@ choose_arena_hard(void)
 		}
 		
 		ret->nthreads++;
+		threads_num_of_node[ret->node_id] += 1;
 		malloc_mutex_unlock(&arenas_lock);
-		__sync_fetch_and_add(&threads_num_of_node[ret->node_id], 1);
 	} else {
 		ret = arenas[0];
 		malloc_mutex_lock(&arenas_lock);
