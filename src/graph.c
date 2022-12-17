@@ -3,6 +3,7 @@
 #define MAX(x, y) x > y ? x : y
 #define MIN(x, y) x < y ? x : y 
 #define INFINITY 1 << 31
+#define DOUBLE_INFINITY 1e31
 
 #define INIT_NODES_2(root, in_merge_addr, in_id, in_bus_type1, in_bus_type2) { \
 root.children = (node *)malloc(2*sizeof(node)); \
@@ -58,7 +59,7 @@ uint64_t get_bandwidth(int type, uint64_t x) {
         case 2:
             return (-1.57769804e-08)*x*x*x+(1.99967877e-03)*x*x+(-4.69729161e+01)*x+(4.01794573e+09);
         default:
-            return INFINITY;
+            return DOUBLE_INFINITY;
     }
 }
 
@@ -121,7 +122,7 @@ void update_weight(){
     int i;
     for(i  = 0; i < performance.socket_num; ++i) {
         int temp_d, temp_b;
-        update_weight_inside(&root[i], 4, INFINITY, &weight[i*performance.socket_num], &temp_d, &temp_b);
+        update_weight_inside(&root[i], 4, DOUBLE_INFINITY, &weight[i*performance.socket_num], &temp_d, &temp_b);
         compute_percent(&weight[i*performance.socket_num], performance.socket_num);
     }
 }
