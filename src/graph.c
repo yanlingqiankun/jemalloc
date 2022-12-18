@@ -121,7 +121,8 @@ void compute_percent(double *array, int len) {
 void update_weight(){
     int i;
     for(i  = 0; i < performance.socket_num; ++i) {
-        int temp_d, temp_b;
+        int temp_d;
+        uint64_t temp_b;
         update_weight_inside(&root[i], 4, DOUBLE_INFINITY, &weight[i*performance.socket_num], &temp_d, &temp_b);
         compute_percent(&weight[i*performance.socket_num], performance.socket_num);
     }
