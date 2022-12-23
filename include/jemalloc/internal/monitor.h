@@ -49,20 +49,35 @@ typedef enum
     END_OF_MODEL_LIST = 0x0ffff    
 }cpu_model_t;
 
+typedef enum {
+    INTEL,
+    AMD,
+    OTHERS
+} cpu_brand_t;
+
 #elif (defined (__aarch64__))
 typedef enum{
-    null
+    KUNPENG920 = 0xd01
 }cpu_model_t;
+
+typedef enum {
+    ARM = 0x41,
+    Broadcom = 0x42,
+    Cavium = 0x43,
+    DigitalEquipment = 0x44,
+    HiSilicon = 0x48,
+    Infineon = 0x49,
+    Freescale = 0x4D,
+    NVIDIA = 0x4E,
+    APM = 0x50,
+    Qualcomm = 0x51,
+    Marvell = 0x56,
+    Intel = 0x69
+} cpu_brand_t;
 #endif 
 
 #define SOCKET_EVENT_MASK 0xff00
 #define MONITOR_INTERVAL 1000000
-
-typedef enum {
-    INTEL,
-    AMD,
-    ARM
-} cpu_brand_t;
 
 typedef struct {
     cpu_brand_t brand;

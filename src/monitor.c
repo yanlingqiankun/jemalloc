@@ -318,6 +318,7 @@ bool collect_performance(){
     write_performance_info();
 #endif
     switch (cpu_info.brand) {
+#ifdef __x86_64__
         case INTEL:
             switch (cpu_info.model) {
                 case SKX:
@@ -329,6 +330,10 @@ bool collect_performance(){
                     break;
             }
             break;
+        case AMD:
+            break;
+#elif (defined (__aarch64__))
+#endif 
     }
     reset();
     unfreeze();
@@ -362,6 +367,7 @@ bool performance_boot() {
     int uncore_num = 0;
     performance.socket_num = cpu_topology.numa_nodes_num;
     switch (cpu_info.brand) {
+#ifdef __x86_64__
         case INTEL:
             switch (cpu_info.model) {
                 case SKX:
@@ -412,8 +418,10 @@ bool performance_boot() {
             break;
         case AMD:
             break;
+#elif (defined (__aarch64__))
         case ARM:
             break;
+#endif 
     }
     return false;
 }
