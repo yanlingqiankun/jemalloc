@@ -1,10 +1,15 @@
 #include "jemalloc/internal/jemalloc_internal.h"
 
 #define MC_CH_PCI_PMON_CTL_EN (1 << 22)
+#ifdef __x86_64__
 #define cpuid(func,eax,ebx,ecx,edx)\
     __asm__ __volatile__ ("cpuid":\
     "=a" (eax), "=b" (ebx),"=c" (ecx), "=d" (edx):\
     "a" (func));
+#elif (defined (__aarch64__))
+#define cpuid(cid)\
+    __asm__("mrs %0, MIDR_EL1" : "=r"(cid));
+#endif 
 
 #define NULL_CHECK(CALL) \
 {\
@@ -50,9 +55,12 @@ bool cpu_model_boot(){
             // TODO: AMD cpu
         }        
 
-    #elif (defined (__arch64__))
+    #elif (defined (__aarch64__))
     // TODO: ARM64 cpu
-
+        unsigned int cid;
+        cpuid(cid);
+        cpu_info.brand = (cid & 0xFF000000) >> 24;
+        cpu_info.model = (cid & 0x0000FFF0) >> 4;
     #endif
     return false;
 }
@@ -417,11 +425,15 @@ bool performance_boot() {
             i += performance.imc_num * performance.socket_num; ++j; performance.evesel_index[j] = i;
             break;
         case AMD:
+            return true;
             break;
 #elif (defined (__aarch64__))
-        case ARM:
+        case HiSilicon:
+            return true;
             break;
 #endif 
+        default:
+            return true;
     }
     return false;
 }
