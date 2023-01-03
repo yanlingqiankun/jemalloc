@@ -25,8 +25,8 @@ void write_to_free(void *ptr) {
         malloc_printf("[L_E] %p %ld %ld\n", ptr, end_time.tv_sec, end_time.tv_usec); // lifetime-end
     }
 }
-
 void write_performance_info() {
+#ifdef __x86_64__
     malloc_printf("[P_I] %ld %ld %ld %ld %ld %ld %ld %ld\n", 
     performance.memory_read[0],
     performance.memory_read[1], 
@@ -36,6 +36,22 @@ void write_performance_info() {
     performance.bandwidth[1],
     performance.bandwidth[2],
     performance.bandwidth[3]); // performance-information
+#elif (defined (__aarch64__))
+    malloc_printf("[P_I] %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld\n", 
+        performance.memory_read[0],
+        performance.memory_read[1], 
+        performance.memory_read[2],
+        performance.memory_read[3], 
+        performance.memory_write[0],
+        performance.memory_write[1],
+        performance.memory_write[2],
+        performance.memory_write[3],
+        performance.bandwidth[0],
+        performance.bandwidth[1],
+        performance.bandwidth[2],
+        performance.bandwidth[3]
+    );
+#endif
 }
 
 #endif

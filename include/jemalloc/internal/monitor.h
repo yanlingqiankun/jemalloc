@@ -105,7 +105,12 @@ typedef enum {
     UPI_RECEIVE,
     UPI_TRANSMIT,
     IMC_READ,
-    IMC_WRITE
+    IMC_WRITE,
+
+    // hisi performance
+    HISI_FLUX_RD,
+    HISI_FLUX_WR,
+    HISI_RX_OUTER
 } event_config;
 
 typedef enum {

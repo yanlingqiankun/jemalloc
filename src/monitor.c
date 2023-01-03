@@ -56,7 +56,6 @@ bool cpu_model_boot(){
         }        
 
     #elif (defined (__aarch64__))
-    // TODO: ARM64 cpu
         unsigned int cid;
         cpuid(cid);
         cpu_info.brand = (cid & 0xFF000000) >> 24;
@@ -146,6 +145,17 @@ void event_attr_init(struct perf_event_attr *attr, bool is_group, event_config c
                             (PERF_COUNT_HW_CACHE_OP_WRITE << 8) |
                             (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16);\
             goto perf_type_cache;
+        case HISI_FLUX_RD:
+            attr->config = 0x1;
+            return;
+        case HISI_FLUX_WR:
+            attr->config = 0x0;
+            return;
+        case HISI_RX_OUTER:
+            attr->config = 0x1;
+            return;
+        default:
+            return;
 
         
     }
@@ -204,6 +214,39 @@ void init_evesel(event_s *evesel, perf_range_t range, event_config config, int u
         default:
             malloc_printf("no support for the simple range\n");
     }
+}
+
+int init_evesel_array(event_s *evesel, event_config config, int socket_id, char *uncore_prefix) {
+    int number = 0, rc;
+    DIR *dir;
+    struct dirent *entry;
+    
+    dir = opendir("/sys/devices/");
+    if (dir == NULL) {
+        malloc_printf("failed to opendir /sys/devices/ \n");
+        return -1;
+    }
+    while ((entry = readdir(dir)) != NULL) {
+        rc = fnmatch(uncore_prefix, entry->d_name, FNM_PATHNAME | FNM_PERIOD);
+        if (rc == 0) {
+            evesel[number].config = config;
+            evesel[number].s_id = socket_id;
+            evesel[number].range = BUS;
+            event_attr_init(&(evesel[number].attr), false, config, -1);
+            char filename_buf[64]; 
+            sprintf(filename_buf, "/sys/devices/%s/type", entry->d_name);
+            evesel[number].attr.type = read_event_type(filename_buf);
+            evesel[number].fd = perf_event_open(&evesel[number].attr, -1, 
+                find_first_cpu_of_node(socket_id)/* the last cpu core of the socket*/, -1, 0);
+            if (evesel[number].fd < 0) {
+                malloc_printf("failed to open event\n");
+            }
+            number++;
+        } else if (rc == FNM_NOMATCH) {
+            continue;
+        }
+    }
+    return number;
 }
 
 void freeze() {
@@ -314,6 +357,17 @@ bool collect_performance(){
                         // performance.all_memory_write += bus_data * 64;
                         performance.memory_write[performance.evesel[i].s_id] += bus_data;
                         performance.all_memory_write += bus_data;
+                        break;
+                    case HISI_FLUX_RD:
+                        performance.memory_read[performance.evesel[i].s_id] += bus_data;
+                        performance.all_memory_read += bus_data;
+                        break;
+                    case HISI_FLUX_WR:
+                        performance.memory_write[performance.evesel[i].s_id] += bus_data;
+                        performance.all_memory_write += bus_data;
+                        break;
+                    case HISI_RX_OUTER:
+                        performance.bandwidth[performance.evesel[i].s_id] += bus_data;
                         break;
                     default:
                         break;
@@ -429,7 +483,51 @@ bool performance_boot() {
             break;
 #elif (defined (__aarch64__))
         case HiSilicon:
-            return true;
+            switch (cpu_info.model) {
+                case KUNPENG920: 
+                    if (cpu_topology.numa_nodes_num == 4){
+                        performance.perf_num = 4 * 4 * 2/* hisi_sccl_ddrc flux_rd and flux_wr*/ + 4 * 2 /* hisi_sccl_hha rx_outer*/;
+                    }
+                    NULL_CHECK(performance.bandwidth = (uint64_t *) malloc (sizeof(uint64_t) * performance.socket_num)); // hha
+                    NULL_CHECK(performance.evesel = (event_s *) malloc (sizeof(event_s) * performance.perf_num));
+                    NULL_CHECK(performance.evesel_index = (int *) malloc (sizeof(int) * (2 + 2 + 2 + 1)));
+                    NULL_CHECK(performance.memory_read = (uint64_t *) malloc (sizeof(uint64_t) * performance.socket_num));
+                    NULL_CHECK(performance.memory_write = (uint64_t *) malloc (sizeof(uint64_t) * performance.socket_num));
+                    NULL_CHECK(performance.node_weights = (float *) malloc(sizeof(float) * performance.socket_num));
+                    NULL_CHECK(performance.nodes = (int *) malloc(sizeof(int) * performance.socket_num));
+                    int i = 0, j = 0, z = 0;
+                    performance.evesel_index[j] = i;
+                    // init_evesel(&performance.evesel[i], CPU, CYCLE, -1, -1);  i += 1; ++j; performance.evesel_index[j] = i;
+                    // init_evesel(&performance.evesel[i], CPU, INSTRUCTIONS, -1, -1); i += 1; ++j; performance.evesel_index[j] = i;
+
+                    //flux_rd and  flux_wr
+                    int uncore_number;
+                    char filename_buf[64]; 
+                    for(z = 0; z < performance.socket_num; ++z) {
+                        int uncore_id = z*2 + 1;
+                        sprintf(filename_buf, "hisi_sccl%d_ddrc*", uncore_id);
+                        uncore_number = init_evesel_array(&performance.evesel[i], HISI_FLUX_RD, z, filename_buf);
+                        i = i + uncore_number;
+                        uncore_number = 0;
+                    }
+                    for(z = 0; z < performance.socket_num; ++z) {
+                        int uncore_id = z*2 + 1;
+                        sprintf(filename_buf, "hisi_sccl%d_ddrc*", uncore_id);
+                        uncore_number = init_evesel_array(&performance.evesel[i], HISI_FLUX_WR, z, filename_buf);
+                        i = i + uncore_number;
+                        uncore_number = 0;
+                    }
+                    
+                    // hha rx_outer
+                    for(z = 0; z < performance.socket_num; ++z) {
+                        int uncore_id = z*2 + 1;
+                        sprintf(filename_buf, "hisi_sccl%d_hha*", uncore_id);
+                        uncore_number = init_evesel_array(&performance.evesel[i], HISI_RX_OUTER, z, filename_buf);
+                        i = i + uncore_number;
+                        uncore_number = 0;
+                    }
+                    break;
+            }
             break;
 #endif 
         default:
@@ -439,6 +537,7 @@ bool performance_boot() {
 }
 
 void *monitor_task(void *para) {
+    unfreeze();
     while (performance.runing){
         collect_performance();
         usleep(MONITOR_INTERVAL);
