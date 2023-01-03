@@ -214,10 +214,10 @@ void freeze() {
         case CPU:
         case BUS:
         case CORE:
-            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_ENABLE, 0);
+            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_DISABLE, 0);
             break;        
         case SOCKET:
-            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
         default:
             break;
         }
@@ -250,10 +250,10 @@ void unfreeze() {
         case CPU:
         case BUS:
         case CORE:
-            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_DISABLE, 0);
+            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_ENABLE, 0);
             break;        
         case SOCKET:
-            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+            ioctl(performance.evesel[i].fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
         default:
             break;
         }
