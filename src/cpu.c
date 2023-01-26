@@ -482,9 +482,11 @@ int find_first_cpu_of_node(int node) {
 	int ret = -1;
 	int i = 0; 
 	do{
-		ret = ffs_long(node_ptr->maskp[i]);
+		if(node_ptr->maskp[i]){
+			ret = ffs_long(node_ptr->maskp[i]) + i*64;
+		}
 		++i;
-	} while(ret < 0 && i < node_ptr->size);
+	} while(ret < 0 && i*64 < node_ptr->size);
 	return ret;
 }
 

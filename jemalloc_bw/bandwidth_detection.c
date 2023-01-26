@@ -32,10 +32,10 @@ typedef struct
     uint64_t *counter2;
 } task_t;
 
-#ifdef __x86_64__
 int get_task(task_t **t) {
     switch (cpu_info.brand)
-    {
+    {   
+#ifdef __x86_64__
         case INTEL:
             switch (cpu_info.model) 
             {
@@ -57,16 +57,35 @@ int get_task(task_t **t) {
                     }
             }
             break;
+#elif (defined (__aarch64__))
+        case HiSilicon:
+            switch (cpu_info.model){
+                case KUNPENG920:
+                    if (cpu_topology.numa_nodes_num == 4) {
+                        *t = (task_t *)malloc(sizeof(task_t) * 2);
+                        if (!(*t)) {
+                            return -1;
+                        }
+                        (*t)[0].tt = NtoM;
+                        (*t)[0].node1 = 1;
+                        (*t)[0].counter1 = &performance.memory_write[1];
+                        (*t)[1].tt = NtoN;
+                        (*t)[1].node1 = 1;
+                        (*t)[1].node2 = 2;
+                        (*t)[1].counter1 = &performance.bandwidth[2];
+                        (*t)[1].counter2 = &performance.memory_write[2];
+                        return 2;
+                    }
+                    break;            
+                default:
+                    break;
+            }
+#endif
         default:
             break;
     }
     return 0;
 }
-#elif (defined (__arch64__))
-int get_task(task_t *t) {
-    return -3;
-}
-#endif
 
 static void dombind(void *mem, size_t size, int pol, struct bitmask *bmp)
 {
@@ -183,7 +202,7 @@ void execute_task (task_t t, FILE *bandwidth_file) {
                 }
             } else {
                 for(i = 0; i < 10; ++i) {
-                    status += *t.counter2;
+                    status += *t.counter1;
                     usleep(2*MONITOR_INTERVAL);
                 }
             }

@@ -395,6 +395,18 @@ bool collect_performance(){
         case AMD:
             break;
 #elif (defined (__aarch64__))
+        case HiSilicon:
+            switch (cpu_info.model) {
+                case KUNPENG920: 
+                    traffic[0] = performance.memory_read[0] + performance.memory_write[0];
+                    traffic[1] = performance.memory_read[1] + performance.memory_write[1];
+                    traffic[2] = performance.memory_read[2] + performance.memory_write[2];
+                    traffic[3] = performance.memory_read[3] + performance.memory_write[3];
+                    uint64_t outer0 = performance.bandwidth[0]+performance.bandwidth[1];
+                    uint64_t outer1 = performance.bandwidth[2]+performance.bandwidth[3];
+                    traffic[4] = outer0 > outer1 ? outer0 : outer1;
+            }
+            break
 #endif 
     }
     reset();
