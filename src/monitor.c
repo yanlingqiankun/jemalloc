@@ -406,7 +406,7 @@ bool collect_performance(){
                     uint64_t outer1 = performance.bandwidth[2]+performance.bandwidth[3];
                     traffic[4] = outer0 > outer1 ? outer0 : outer1;
             }
-            break
+            break;
 #endif 
     }
     reset();

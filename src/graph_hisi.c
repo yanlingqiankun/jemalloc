@@ -87,11 +87,11 @@ bool graph_boot() {
     INIT_NODES_0(root[0].children[2].children[0], 2, 2)
     INIT_NODES_0(root[0].children[2].children[1], 3, 3)
 
-    INIT_NODES_0(root[1].children[0], 0, 2)
-    INIT_NODES_0(root[1].children[1], 1, 3)
-    INIT_NODES_2(root[1].children[2], 2, 0, 0, 1)
-    INIT_NODES_0(root[1].children[2].children[0], 2, 0)
-    INIT_NODES_0(root[1].children[2].children[1], 3, 1)
+    INIT_NODES_0(root[1].children[0], 2, 2)
+    INIT_NODES_0(root[1].children[1], 3, 3)
+    INIT_NODES_2(root[1].children[2], 0, 0, 0, 1)
+    INIT_NODES_0(root[1].children[2].children[0], 0, 0)
+    INIT_NODES_0(root[1].children[2].children[1], 1, 1)
 
     traffic[0] = traffic[1] = traffic[2] = traffic[3] = traffic[4] = 0;
     weight[0] = weight[3] = weight[1] = weight[2] = weight[4] = weight[5] = weight[6] = weight[7] = 0;
@@ -117,14 +117,14 @@ void update_weight_inside(node *n, int bus_type, uint64_t bl, double *w, int *d,
         }
         if (b_sum > n->bottleneck){
             for(int i = n->merge_addr; i < d_num+n->merge_addr; ++i){
-                w[i] = w[i] * (n->bottleneck/b_sum);
+                w[i] = w[i] * (n->bottleneck/(b_sum+0.0));
             }
         }
     } else {
         w[n->node_id] = n->bottleneck;
     }
-    *d = d_num;
-    *b = b_sum;
+    *d = 1 > d_num ? 1 : d_num;
+    *b = b_sum > n->bottleneck ? b_sum : n->bottleneck;
     return;
 }
 
@@ -140,10 +140,10 @@ void compute_percent(double *array, int len) {
 
 void update_weight(){
     int i;
-    for(i  = 0; i < performance.socket_num; ++i) {
+    for(i  = 0; i < C; ++i) {
         int temp_d;
         uint64_t temp_b;
-        update_weight_inside(&root[i], 4, DOUBLE_INFINITY, &weight[i*performance.socket_num], &temp_d, &temp_b);
-        compute_percent(&weight[i*performance.socket_num], performance.socket_num);
+        update_weight_inside(&root[i], 5, INFINITY, &weight[i*M], &temp_d, &temp_b);
+        compute_percent(&weight[i*M], M);
     }
 }

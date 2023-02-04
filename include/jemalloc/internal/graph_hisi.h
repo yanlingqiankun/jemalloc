@@ -1,7 +1,7 @@
 #ifdef JEMALLOC_H_EXTERNS
 #define C 2
 #define M 4
-#define BUS_NUM 5
+#define BUS_NUM 6
 #define PHYSICAL_CORE_NUM 32
 #define GENERATE_SUCCESS
 

@@ -11,26 +11,30 @@ bool policy_boot() {
     return (false);
 }
 
-JEMALLOC_INLINE int get_max(double *array, int len) {
-    int i, ret = 0;
+JEMALLOC_INLINE int get_max(double *array, int len, int *min) {
+    int i, max = *min = 0;
     for(i = 0; i < len; i++) {
-        if (array[i] > array[ret]){
-            ret = i;
+        if (array[i] > array[max]){
+            max = i;
+        } 
+        if (array[i] < array[*min]){
+            *min = i;
         }
     }
-    return ret;
+    return max;
 }
 
 long mbind_pages_with_weight_ordered(double *weights, void *addr, unsigned long size){
     int i, j; size_t s;
-    int max_index = 0, sec_max_index, first_loop = 1;
-    max_index = get_max(weights, performance.socket_num);
-    sec_max_index = (max_index + 1) % performance.socket_num;
+    int max_index = 0, sec_max_index, min_index, first_loop = 1;
+    max_index = get_max(weights, M, &min_index);
+    sec_max_index = (max_index + 1) % M;
     void * temp_addr = addr;
     struct bitmask *mbind_mask = numa_bitmask_alloc(cpu_topology.node_mask.size);
-    for(i = 0; i < performance.socket_num - 1; ++i) {        
-        for(j = 0; j < performance.socket_num; ++j) {
-            if(weights[max_index] - weights[j] > 1e-5 && weights[j] - weights[sec_max_index] > 1e-5) {
+    for(i = 0; i < M - 1; ++i) {  
+        sec_max_index = min_index;      
+        for(j = 0; j < M; ++j) {
+            if(weights[max_index] > weights[j] && weights[j] > weights[sec_max_index]) {
                 sec_max_index = j;
             }
         }
@@ -47,7 +51,7 @@ long mbind_pages_with_weight_ordered(double *weights, void *addr, unsigned long 
         max_index = sec_max_index;
     }
     numa_bitmask_setbit(mbind_mask, max_index);
-    return mbind(temp_addr, size - (temp_addr - addr), mbind_interleave, mbind_mask->maskp, 
+    return mbind(temp_addr, size - (temp_addr - addr), mbind_interleave,  numa_all_nodes_ptr->maskp, 
                         cpu_topology.node_mask.size, MPOL_MF_STRICT);
 }
 
@@ -55,7 +59,7 @@ long mbind_pages_with_weight(double *weights, void *addr, unsigned long size) {
     int i; size_t s;
     void *temp_addr = addr;
     struct bitmask *mbind_mask = numa_bitmask_alloc(cpu_topology.node_mask.size);
-    for(i = 0; i < performance.socket_num - 1; ++i) {
+    for(i = 0; i < M - 1; ++i) {
         numa_bitmask_setbit(mbind_mask, i);
         s = size * weights[i];
         s = s >> STATIC_PAGE_SHIFT << STATIC_PAGE_SHIFT;
@@ -91,9 +95,10 @@ void *place_pages(void *addr, size_t size) {
         malloc_printf("failed to get cpu id with errno = %d\n", errno);
         return NULL;
     }
+    node = node / (M/C);
     // long ret = mbind(addr, size, mbind_interleave, cpu_topology.node_mask.maskp, 
     //                     cpu_topology.node_mask.size+1, MPOL_MF_STRICT);
-    long ret = mbind_pages_with_weight_ordered(&weight[performance.socket_num*node], addr, size);
+    long ret = mbind_pages_with_weight_ordered(&weight[M*node], addr, size);
     if (ret) {
         chunk_unmap(addr, size);
         return NULL;
