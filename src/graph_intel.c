@@ -51,6 +51,7 @@ int root_num;
 node root[2];
 
 uint64_t get_bandwidth(int type, uint64_t x) {
+    x = x * MONITOR_TIMES;
     switch (type){
         case 0:
             return (-1.57769804e-08)*x*x*x+(1.99967877e-03)*x*x+(-4.69729161e+01)*x+(4.01794573e+09);
@@ -97,14 +98,14 @@ void update_weight_inside(node *n, int bus_type, uint64_t bl, double *w, int *d,
         }
         if (b_sum > n->bottleneck){
             for(int i = n->merge_addr; i < d_num+n->merge_addr; ++i){
-                w[i] = w[i] * (n->bottleneck/b_sum);
+                w[i] = w[i] * (n->bottleneck/(b_sum+0.0));
             }
         }
     } else {
         w[n->node_id] = n->bottleneck;
     }
-    *d = d_num;
-    *b = b_sum;
+    *d = 1 > d_num ? 1 : d_num;
+    *b = b_sum > n->bottleneck ? b_sum : n->bottleneck;
     return;
 }
 

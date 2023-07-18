@@ -156,8 +156,6 @@ void event_attr_init(struct perf_event_attr *attr, bool is_group, event_config c
             return;
         default:
             return;
-
-        
     }
     perf_type_hardware:
         attr->type = PERF_TYPE_HARDWARE;
@@ -369,6 +367,12 @@ bool collect_performance(){
                     case HISI_RX_OUTER:
                         performance.bandwidth[performance.evesel[i].s_id] += bus_data;
                         break;
+                    case INSTRUCTIONS:
+                        performance.instructions[performance.evesel[i].s_id] = bus_data;
+                        break;
+                    case STALL_CYCLE_BACK_END:
+                        load_ratio[performance.evesel[i].s_id] = 
+                            (performance.instructions[performance.evesel[i].s_id] + bus_data) / (MAX_INSTRUCTIONS + 0.0);
                     default:
                         break;
                 }
@@ -498,7 +502,10 @@ bool performance_boot() {
             switch (cpu_info.model) {
                 case KUNPENG920: 
                     if (cpu_topology.numa_nodes_num == 4){
-                        performance.perf_num = 4 * 4 * 2/* hisi_sccl_ddrc flux_rd and flux_wr*/ + 4 * 2 /* hisi_sccl_hha rx_outer*/;
+                        performance.perf_num = 
+                            4 * 4 * 2/* hisi_sccl_ddrc flux_rd and flux_wr */ 
+                            + 4 * 2 /* hisi_sccl_hha rx_outer */
+                            + 4 * 2 /* instructions and backend_stalled */;
                     }
                     NULL_CHECK(performance.bandwidth = (uint64_t *) malloc (sizeof(uint64_t) * performance.socket_num)); // hha
                     NULL_CHECK(performance.evesel = (event_s *) malloc (sizeof(event_s) * performance.perf_num));
@@ -507,6 +514,7 @@ bool performance_boot() {
                     NULL_CHECK(performance.memory_write = (uint64_t *) malloc (sizeof(uint64_t) * performance.socket_num));
                     NULL_CHECK(performance.node_weights = (float *) malloc(sizeof(float) * performance.socket_num));
                     NULL_CHECK(performance.nodes = (int *) malloc(sizeof(int) * performance.socket_num));
+                    NULL_CHECK(performance.instructions = (uint64_t *) malloc(sizeof(uint64_t) * performance.socket_num));
                     int i = 0, j = 0, z = 0;
                     performance.evesel_index[j] = i;
                     // init_evesel(&performance.evesel[i], CPU, CYCLE, -1, -1);  i += 1; ++j; performance.evesel_index[j] = i;
@@ -537,6 +545,12 @@ bool performance_boot() {
                         uncore_number = init_evesel_array(&performance.evesel[i], HISI_RX_OUTER, z, filename_buf);
                         i = i + uncore_number;
                         uncore_number = 0;
+                    }
+
+                    // instructions and stall_cycle
+                    for(z = 0; z < performance.socket_num; ++z) {
+                        init_evesel(&performance.evesel[i], BUS, INSTRUCTIONS, -1, z); i++;
+                        init_evesel(&performance.evesel[i], BUS, STALL_CYCLE_BACK_END, -1, z); i++;
                     }
                     break;
             }

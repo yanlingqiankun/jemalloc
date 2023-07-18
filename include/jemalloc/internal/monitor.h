@@ -78,6 +78,7 @@ typedef enum {
 
 #define SOCKET_EVENT_MASK 0xff00
 #define MONITOR_INTERVAL 1000000
+#define MONITOR_TIMES 1e6/MONITOR_INTERVAL
 
 typedef struct {
     cpu_brand_t brand;
@@ -150,8 +151,7 @@ typedef struct {
 
     // cpu
     uint64_t cpu_cycle;
-    uint64_t stalled_cycle;
-    uint64_t instructions;
+    uint64_t *instructions;
 
     // bus
     int *link0;

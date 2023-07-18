@@ -59,10 +59,12 @@ typedef struct Node{
     int node_id;
     int merge_addr;
 }node;
+double load_ratio[M];
 int root_num;
 node root[2];
 
 uint64_t get_bandwidth(int type, uint64_t x) {
+    x = x * MONITOR_TIMES;
     switch (type){
         case 0:
         case 1:
@@ -94,7 +96,10 @@ bool graph_boot() {
     INIT_NODES_0(root[1].children[2].children[1], 1, 1)
 
     traffic[0] = traffic[1] = traffic[2] = traffic[3] = traffic[4] = 0;
-    weight[0] = weight[3] = weight[1] = weight[2] = weight[4] = weight[5] = weight[6] = weight[7] = 0;
+    weight[0] = weight[6]  = 0.4;
+    weight[1] = weight[7]  = 0.38;
+    weight[2] = weight[4]  = 0.09;
+    weight[3] = weight[5] = 0.11;
     memory_traffic_index[0] = 0;
     memory_traffic_index[1] = 1;
     memory_traffic_index[2] = 2;
